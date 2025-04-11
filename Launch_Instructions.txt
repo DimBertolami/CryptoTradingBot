@@ -1,36 +1,168 @@
-#	------------------------------------------------------
-#	- Startup of the backend, API, and frontend services - 
-#	------------------------------------------------------
-	
-									# Summary: 
+# Cryptobot Application Launch Instructions
 
-									# backend: 
-under directory: /home/dim/git/Cryptobot
-									# to start backend services
-./startup.sh 		
-									# will gracefully (hopefully) shutdown backend
-./stop 			
+## System Requirements
+- Linux operating system
+- Python 3.12 or higher
+- Node.js 18+ for frontend development
+- SQLite database
+- TensorFlow with XLA support
 
+## Application Components
+1. Frontend (React/TypeScript)
+2. Backend (Python API)
+3. Trading Bot
+4. Machine Learning Models
 
-									# frontend:
-under directory: /opt/lampp/htdocs/bot/frontend
-									#run the dev environment
-npm run dev 					
+## Starting the Application
 
+### 1. Backend Service
+```bash
+# Start the backend service
+sudo ./launch_be.sh
 
-									# paper trading on binance:
-under director: /opt/lampp/htdocs/bot/
-									# Start paper trading
-python paper_trading_cli.py start
-									# Check trading status
-python paper_trading_cli.py status
-									# Stop trading
-python paper_trading_cli.py stop
-									# Switch to live trading (requires API keys)
-python paper_trading_cli.py switch live
-									# Set API keys
-python paper_trading_cli.py api YOUR_API_KEY YOUR_API_SECRET
-									# Reset account to initial state
-python paper_trading_cli.py reset
-									# Export trading results
-python paper_trading_cli.py export
+# Check service status
+sudo systemctl status cryptobot-backend
+```
+
+### 2. Frontend Service
+```bash
+# Start the frontend service
+sudo ./launch_fe.sh
+
+# Access the application at http://localhost:3000
+```
+
+## Service Management
+
+### Auto-Restart Mechanism
+- Services are configured to auto-restart with exponential backoff
+- Check logs for restart attempts:
+```bash
+sudo journalctl -u cryptobot-backend -f
+```
+
+### Manual Restart
+```bash
+# Stop services
+sudo systemctl stop cryptobot-backend
+sudo systemctl stop cryptobot-frontend
+
+# Start services
+sudo systemctl start cryptobot-backend
+sudo systemctl start cryptobot-frontend
+```
+
+## Troubleshooting Guide
+
+### Backend Issues
+1. Check logs:
+```bash
+sudo tail -f /var/log/cryptobot/backend.log
+```
+
+2. Common errors:
+- Port conflicts (default: 8000)
+- Environment variable loading
+- Database connection issues
+- ML model loading problems
+
+### Frontend Issues
+1. Check logs:
+```bash
+sudo tail -f /var/log/cryptobot/frontend.log
+```
+
+2. Common issues:
+- WebSocket connection failures
+- API endpoint connectivity
+- UI rendering problems
+
+### ML/Deep Learning Issues
+1. Verify TensorFlow installation:
+```bash
+python -c "import tensorflow as tf; print(tf.__version__)"
+```
+
+2. Check GPU/CPU availability:
+```bash
+python -c "import tensorflow as tf; print('GPUs:', tf.config.list_physical_devices('GPU'))"
+```
+
+### Network Issues
+1. Check API connectivity:
+```bash
+ping -c 4 coingecko.com
+```
+
+2. Verify WebSocket connections:
+```bash
+sudo netstat -tulpn | grep 8000
+```
+
+## Data Visualization
+
+The application uses Recharts for data visualization, displaying:
+- Real-time cryptocurrency prices
+- Market capitalization
+- Trading volume
+- Risk score analysis
+- Custom watch rules
+
+### Chart Features
+- Monotone interpolation for smooth price curves
+- Custom tooltips with detailed data points
+- Multiple data series support
+- Responsive design
+
+## System Integration
+
+### Service Status
+```bash
+# Check all Cryptobot services
+sudo systemctl list-units --type=service | grep cryptobot
+
+# Check specific service status
+sudo systemctl status cryptobot-backend
+```
+
+### Log Management
+```bash
+# View all logs
+sudo journalctl -u cryptobot-*
+
+# View specific logs
+sudo journalctl -u cryptobot-backend -f
+```
+
+## Environment Configuration
+
+### Environment Variables
+1. Backend:
+- API keys
+- Database connections
+- ML model paths
+- Service ports
+
+2. Frontend:
+- API endpoints
+- WebSocket URLs
+- Feature flags
+
+### Configuration Files
+- Backend: `/backend/config.py`
+- Frontend: `/src/config.ts`
+- ML: `/bot/ml_config.py`
+
+## Security Notes
+- All services run with appropriate permissions
+- API keys should be stored in environment variables
+- Database connections are encrypted
+- WebSocket communications are secured
+
+## Support
+For any issues not covered in this guide:
+1. Check the logs first
+2. Verify system requirements
+3. Check network connectivity
+4. Contact support with error messages and logs
+
