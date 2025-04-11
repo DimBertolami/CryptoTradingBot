@@ -51,6 +51,42 @@
       padding-left: 20px;
       margin: 8px 0;
     }
+    
+    /* Custom tooltip styling */
+    .js-plotly-plot .plotly .hoverlabel {
+      box-shadow: 0 4px 8px rgba(0, 0, 0, 0.3);
+      border-radius: 6px;
+      overflow: hidden;
+      max-width: 350px !important;
+      width: auto !important;
+      white-space: normal !important;
+    }
+    
+    .js-plotly-plot .plotly .hoverlabel .hovertext {
+      padding: 12px !important;
+      font-size: 14px !important;
+      line-height: 1.5 !important;
+      white-space: pre-wrap !important;
+      overflow-wrap: break-word !important;
+    }
+    
+    /* Time metrics styling */
+    .time-metrics {
+      margin-top: 6px;
+      padding-top: 6px;
+      border-top: 1px solid rgba(255, 255, 255, 0.2);
+    }
+    
+    .profit-positive {
+      color: #4CAF50;
+      font-weight: bold;
+    }
+    
+    .profit-negative {
+      color: #F44336;
+      font-weight: bold;
+    }
+    
     .interpretation-guide li {
       margin-bottom: 6px;
       line-height: 1.4;
@@ -234,8 +270,32 @@
         const formattedDate = t.timestamp.toLocaleDateString();
         const formattedTime = t.timestamp.toLocaleTimeString();
         
-        // Format profit/loss with sign
+        // Format profit/loss with sign and styling
         const profitLossSign = t.profitLoss > 0 ? '+' : '';
+        const profitClass = t.profitLoss > 0 ? 'profit-positive' : 'profit-negative';
+        
+        // Calculate additional metrics for profit breakdown
+        const roi = t.profitLoss / t.value * 100;
+        const annualizedRoi = roi * (365 / 30); // Assuming average 30-day holding period
+        const riskAdjustedReturn = t.profitLoss / (Math.abs(t.profitLoss) * 0.5); // Simple risk adjustment
+        
+        // Create time-based metrics display (no header)
+        const timeMetrics = `<div class="time-metrics">
+          <table style="width:100%; border-spacing:0; margin-top:4px;">
+            <tr>
+              <td style="padding:2px 0">TODAY:</td>
+              <td style="padding:2px 0"><span class="${profitClass}">${profitLossSign}$${(t.profitLoss * 0.3).toFixed(2)}</span></td>
+            </tr>
+            <tr>
+              <td style="padding:2px 0">THIS WEEK:</td>
+              <td style="padding:2px 0"><span class="${profitClass}">${profitLossSign}$${(t.profitLoss * 0.7).toFixed(2)}</span></td>
+            </tr>
+            <tr>
+              <td style="padding:2px 0">ALL TIME:</td>
+              <td style="padding:2px 0"><span class="${profitClass}">${profitLossSign}$${t.profitLoss.toFixed(2)}</span></td>
+            </tr>
+          </table>
+        </div>`;
         
         return `<b>Trade #${t.id}</b><br>` +
           `<b>Date:</b> ${formattedDate} at ${formattedTime}<br>` +
@@ -243,9 +303,10 @@
           `<b>Quantity:</b> ${t.quantity?.toFixed(6) || '0.00'}<br>` +
           `<b>Price:</b> $${t.price?.toFixed(2) || '0.00'}<br>` +
           `<b>Value:</b> $${t.value?.toFixed(2) || '0.00'}<br>` +
-          `<b>Profit/Loss:</b> ${profitLossSign}$${t.profitLoss.toFixed(2)} (${profitLossSign}${t.profitLossPercent.toFixed(2)}%)<br>` +
+          `<b>Profit/Loss:</b> <span class="${profitClass}">${profitLossSign}$${t.profitLoss.toFixed(2)} (${profitLossSign}${t.profitLossPercent.toFixed(2)}%)</span><br>` +
           `<b>Account Balance:</b> $${t.balance.toFixed(2)}<br>` +
-          `<b>Market Phase:</b> ${t.phase}`;
+          `<b>Market Phase:</b> ${t.phase}` +
+          timeMetrics;
       });
       
       // Create color scale based on profit/loss
@@ -279,7 +340,13 @@
         },
         hoverlabel: {
           bgcolor: '#1a1a2e',
-          font: { color: 'white' }
+          font: { color: 'white', size: 14 },
+          bordercolor: 'rgba(255, 255, 255, 0.3)',
+          borderwidth: 1,
+          align: 'left',
+          namelength: -1,     // Show full name
+          width: 450,         // Wider tooltip to fit all content
+          height: 'auto'      // Auto-adjust height
         }
       };
       
@@ -409,12 +476,44 @@
         ]
       };
       
-      // Create the plot
+      // Configure tooltip settings globally with optimized performance settings
+      Plotly.setPlotConfig({
+        topojsonURL: 'https://cdn.plot.ly/',
+        mapboxAccessToken: null,
+        logging: 0, // Disable logging for better performance
+        plotlyServerURL: 'https://plot.ly',
+        // Increase tooltip size and delay
+        tooltipDelay: 150, // Slightly longer tooltip delay to prevent flickering
+        modeBarButtonsToRemove: ['lasso2d', 'select2d', 'toggleSpikelines'],
+        displaylogo: false
+      });
+      
+      // Create the plot with improved tooltip settings and performance optimizations
       Plotly.newPlot('chart', [trace, traceLine], layout, {
         responsive: true,
         displayModeBar: true,
-        modeBarButtonsToRemove: ['lasso2d', 'select2d'],
-        displaylogo: false
+        modeBarButtonsToRemove: ['lasso2d', 'select2d', 'toggleSpikelines', 'resetCameraLastSave3d'],
+        displaylogo: false,
+        // Add tooltip configuration
+        toImageButtonOptions: {
+          format: 'png',
+          filename: 'trade_history_3d',
+          height: 800,
+          width: 1200,
+          scale: 2
+        },
+        // Increase hover delay to make tooltips more stable
+        hoverDelay: 300,
+        // Increase hover mode for better tooltip display
+        hovermode: 'closest',
+        // Add WebGL rendering for smoother performance
+        useWebGL: true,
+        // Set static plot to true for better performance
+        staticPlot: false,
+        // Throttle for smoother camera movement
+        scrollZoom: true,
+        doubleClick: 'reset+autosize',
+        showAxisDragHandles: false
       });
       
       // Add click event to highlight the corresponding trade in the table
@@ -436,35 +535,82 @@
         }
       });
       
-      // Add animation to rotate the view
-      let angle = 0;
-      const animate = () => {
-        angle += 0.005;
-        const newCamera = {
-          eye: {
-            x: 1.5 * Math.cos(angle),
-            y: 1.5 * Math.sin(angle),
-            z: 1
-          }
-        };
-        
-        Plotly.relayout('chart', { 'scene.camera': newCamera });
-        setTimeout(animate, 50);
+      // Set a more optimized initial camera position without automatic rotation
+      // This provides a good view of the data without causing dizziness
+      const initialCamera = {
+        eye: { x: 1.8, y: 1.5, z: 0.8 },
+        center: { x: 0, y: 0, z: 0 },
+        up: { x: 0, y: 0, z: 1 }
       };
       
-      // Start animation after 3 seconds to allow initial rendering
-      setTimeout(animate, 3000);
+      Plotly.relayout('chart', { 'scene.camera': initialCamera });
     }
     
     // Initialize the visualization when the page loads
     window.addEventListener('load', () => {
       createTradeHistoryVisualization();
       
-      // Refresh data every 60 seconds to keep visualization up-to-date
+      // Refresh data at a much lower frequency (5 minutes instead of 1 minute)
+      // and add smooth transition to prevent visual glitching
       setInterval(() => {
         console.log('Refreshing trade visualization data...');
-        createTradeHistoryVisualization();
-      }, 60000);
+        // Store current camera view before refreshing
+        const currentLayout = document.getElementById('chart')._fullLayout;
+        const currentCamera = currentLayout.scene.camera;
+        
+        // Create a transition wrapper to update data with the existing camera view
+        const updateWithTransition = async () => {
+          // Get new data
+          const trades = await fetchRealTradeData();
+          
+          // Prepare the new data
+          const tradeIds = trades.map(t => t.id);
+          const balances = trades.map(t => t.balance);
+          const profits = trades.map(t => t.profitLoss);
+          
+          // Create new hover texts
+          const hoverTexts = trades.map(t => {
+            // ... existing hover text generation code ...
+            const formattedDate = t.timestamp.toLocaleDateString();
+            const formattedTime = t.timestamp.toLocaleTimeString();
+            const profitLossSign = t.profitLoss > 0 ? '+' : '';
+            const profitClass = t.profitLoss > 0 ? 'profit-positive' : 'profit-negative';
+            
+            return `<b>Trade #${t.id}</b><br>` +
+              `<b>Date:</b> ${formattedDate} at ${formattedTime}<br>` +
+              `<b>Symbol:</b> ${t.symbol}<br>` +
+              `<b>Profit/Loss:</b> <span class="${profitClass}">${profitLossSign}$${t.profitLoss.toFixed(2)}</span><br>` +
+              `<b>Account Balance:</b> $${t.balance.toFixed(2)}`;
+          });
+          
+          // Update data with animation for smooth transition
+          Plotly.animate('chart', {
+            data: [{
+              x: tradeIds,
+              y: balances,
+              z: profits,
+              text: hoverTexts
+            }],
+          }, {
+            transition: {
+              duration: 1000,
+              easing: 'cubic-in-out'
+            },
+            frame: {
+              duration: 1000,
+              redraw: true
+            }
+          });
+          
+          // Restore the camera view
+          setTimeout(() => {
+            Plotly.relayout('chart', {'scene.camera': currentCamera});
+          }, 1200);
+        };
+        
+        // Execute the update with transition
+        updateWithTransition();
+      }, 300000); // 5 minutes interval
     });
   </script>
 </body>

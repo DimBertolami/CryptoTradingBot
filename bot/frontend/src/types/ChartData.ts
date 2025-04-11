@@ -1,14 +1,12 @@
+
 export interface ChartData {
-    timestamp: string[];
-    price: number[];
-    sma20: number[];
-    sma50: number[];
-    sma200: number[];
-    ema12: number[];
-    ema26: number[];
-    macd: number[];
-    macdSignal: number[];
-    rsi: number[];
-    bollingerUpper: number[];
-    bollingerLower: number[];
+    timestamp: string;
+    chartPaths: {
+        candlestick?: string;
+        indicators?: string;
+        indicators_html?: string; // HTML version of the indicators chart using Plotly
+        signals?: string;
+        price_3d_html?: string; // 3D price surface visualization
+        signals_3d_html?: string; // 3D trading signals visualization
+    };
 }

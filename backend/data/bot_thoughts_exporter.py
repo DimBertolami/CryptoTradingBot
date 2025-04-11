@@ -6,12 +6,9 @@ from datetime import datetime
 from sqlalchemy.orm import Session
 
 # Set up proper path for imports
-sys.path.append(os.path.dirname(os.path.dirname(os.path.dirname(os.path.abspath(__file__)))))
+sys.path.append(os.path.dirname(os.path.dirname(os.path.abspath(__file__))))
 
-from sqlalchemy import create_engine
-from database import SessionLocal, Base
-from models.trading_models import Trade, TradingDecision, ProfitSummary, BotThought, BotJoke
-from models.model import Model
+from database import SessionLocal
 from data.trading_db import record_bot_thought, record_trading_decision, get_total_profit_stats
 
 # Configure logging

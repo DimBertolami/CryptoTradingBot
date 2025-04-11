@@ -1,11 +1,13 @@
 @import url('https://fonts.googleapis.com/css2?family=Cinzel:wght@400;600;800&display=swap');
 
-/* stylelint-disable */
-/* CSS linting is disabled for Tailwind directives */
+/* CSS-IGNORE */
+/* postcss-tailwind-directives:start */
+/* This section contains Tailwind CSS directives */
 @tailwind base;
 @tailwind components;
 @tailwind utilities;
-/* stylelint-enable */
+/* postcss-tailwind-directives:end */
+/* CSS-IGNORE */
 
 :root {
   --theme-gradient-light: linear-gradient(135deg, #f3f4f6 0%, #ffffff 100%);

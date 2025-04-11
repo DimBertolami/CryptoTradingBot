@@ -1,7 +1,6 @@
 #!/bin/bash
 # Paper Trading Bot Startup Script
 # This script starts both the backend and frontend servers for the trading bot
-# and ensures resource usage stays below 70% of system capacity
 
 # Colors for terminal output
 GREEN='\033[0;32m'
@@ -13,7 +12,7 @@ echo -e "${GREEN}Starting Paper Trading Bot System...${NC}"
 
 # 1. Define directories
 BOT_DIR="/opt/lampp/htdocs/bot"
-BACKEND_DIR="$BOT_DIR/backend"
+BACKEND_DIR="/opt/lampp/htdocs/backend"
 FRONTEND_DIR="$BOT_DIR/frontend"
 
 # 1.1 Start resource manager to limit CPU/memory usage to 70%
@@ -65,7 +64,8 @@ fi
 # 5. Start backend server
 echo -e "${GREEN}Starting backend server...${NC}"
 cd "$BACKEND_DIR"
-python paper_trading_api.py > "$BOT_DIR/backend.log" 2>&1 &
+source ../venv/bin/activate
+PYTHONPATH=/opt/lampp/htdocs:/opt/lampp/htdocs/backend uvicorn app:app --reload --port 8000 > "$BOT_DIR/backend.log" 2>&1 &
 BACKEND_PID=$!
 
 # Check if backend started successfully
@@ -80,7 +80,7 @@ echo -e "${YELLOW}Verifying backend server connection...${NC}"
 MAX_RETRIES=10
 RETRY_COUNT=0
 while [ $RETRY_COUNT -lt $MAX_RETRIES ]; do
-    if curl -s "http://localhost:5001/trading/status" > /dev/null 2>&1; then
+    if curl -s "http://localhost:8000/trading/status" > /dev/null 2>&1; then
         echo -e "${GREEN}✓ Backend server is responding correctly${NC}"
         break
     else
@@ -147,7 +147,7 @@ else
 fi
 
 # Start the frontend server
-npm run dev > "$BOT_DIR/frontend.log" 2>&1 &
+cd "$FRONTEND_DIR" && npm run dev > "$BOT_DIR/frontend.log" 2>&1 &
 FRONTEND_PID=$!
 
 # Check if frontend started successfully

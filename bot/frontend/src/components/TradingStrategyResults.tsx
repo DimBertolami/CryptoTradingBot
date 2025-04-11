@@ -1,5 +1,7 @@
 import React, { useState, useEffect, useCallback, useMemo } from 'react';
 import { Line, XAxis, YAxis, CartesianGrid, Tooltip, Legend, ResponsiveContainer, Area, AreaChart, ReferenceLine, Scatter, Brush, ComposedChart, Bar, ReferenceArea } from 'recharts';
+import { tradeTracker } from '../services/tradeTracker';
+import BotPerformanceCard from './BotPerformanceCard';
 import './TradingStrategyResults.css';
 
 // Define types for our trading signals and data
@@ -15,19 +17,22 @@ interface TradingSignal {
 interface TradeAction {
   time: string;
   symbol: string;
-  action: 'BUY' | 'SELL';
+  action: 'buy' | 'sell';
   price: number;
   confidence: number;
-  profit?: number;
-  amount?: number; // Amount to trade (in USD)
+  reason?: string;
+  profit?: number; // Optional profit field
 }
 
-interface PerformanceMetric {
-  time: string;
-  accuracy: number;
-  profit: number;
-  confidence: number;
-  tradesCount: number;
+interface PerformanceData {
+  tradeHistory: TradeAction[];
+  metrics: {
+    totalTrades: number;
+    winRate: number;
+    avgProfit: number;
+    maxDrawdown: number;
+    sharpeRatio: number;
+  };
 }
 
 interface LiveTradingStatus {
@@ -36,25 +41,24 @@ interface LiveTradingStatus {
   signals: TradingSignal[];
   autoRefresh: boolean;
   thoughts?: string[];
-  performance?: {
-    totalProfit: number;
-    accuracy: number;
-    tradeHistory: TradeAction[];
-    learningCurve: PerformanceMetric[];
-  };
+  performance?: PerformanceData;
 }
 
 interface TradingStrategyResultsProps {
   selectedPeriod: string;
-  autoExecuteEnabled?: boolean;
+  autoExecuteEnabled: boolean;
   onExecuteTrade?: (trade: TradeAction) => Promise<boolean>;
 }
 
-const TradingStrategyResults: React.FC<TradingStrategyResultsProps> = ({ selectedPeriod, autoExecuteEnabled = false, onExecuteTrade }) => {
+const TradingStrategyResults: React.FC<TradingStrategyResultsProps> = ({ 
+  selectedPeriod,
+  autoExecuteEnabled = false,
+  onExecuteTrade
+}) => {
   // Track which signals have been executed
   const [executedSignals, setExecutedSignals] = useState<Set<string>>(new Set());
   const [tradingStatus, setTradingStatus] = useState<LiveTradingStatus | null>(null);
-  const [loading, setLoading] = useState<boolean>(true);
+  const [loading, setLoading] = useState(false);
   const [error, setError] = useState<string | null>(null);
   // Calculate refresh interval based on selected period
   const getRefreshIntervalFromPeriod = (period: string): number => {
@@ -161,12 +165,12 @@ const TradingStrategyResults: React.FC<TradingStrategyResultsProps> = ({ selecte
       
       // Create a trade action from the signal with fixed amount of $100
       const tradeAction: TradeAction = {
-        time: new Date().toISOString(),
         symbol: formattedSymbol,
-        action: signal.signal === 'SELL' ? 'SELL' : 'BUY',
+        action: signal.signal === 'SELL' ? 'sell' : 'buy',
         price: signal.currentPrice,
+        time: new Date().toISOString(),
         confidence: signal.confidence,
-        amount: 100 // Fixed amount of $100 for auto-executed trades
+        reason: `Strategy suggestion: ${signal.signal} ${signal.symbol} at ${signal.currentPrice}`
       };
       
       try {
@@ -283,87 +287,155 @@ const TradingStrategyResults: React.FC<TradingStrategyResultsProps> = ({ selecte
     }
   }, [autoExecuteEnabled, autoExecuteTrades, tradingStatus]);
 
-  // Execute a trade from a signal
-  const executeTrade = async (signal: TradingSignal) => {
-    // Check if signal has already been executed
-    const signalId = `${signal.symbol}-${signal.timestamp}`;
-    if (executedSignals.has(signalId)) {
-      console.log(`Trade for ${signal.symbol} was already executed`);
-      return;
-    }
-    
+  const handleExecuteTrade = async (trade: TradeAction) => {
     if (!onExecuteTrade) {
-      console.warn('No trade execution handler provided');
-      return;
+      console.error('onExecuteTrade callback is not provided');
+      return false;
     }
-    
-    // Format the symbol (remove any / character)
-    const formattedSymbol = signal.symbol.replace('/', '');
-    
-    // Create a trade action from the signal with a fixed amount of $100
-    const tradeAction: TradeAction = {
-      time: new Date().toISOString(),
-      symbol: formattedSymbol,  // Use formatted symbol without / character
-      action: signal.signal === 'SELL' ? 'SELL' : 'BUY',
-      price: signal.currentPrice,
-      confidence: signal.confidence,
-      amount: 100  // Add fixed amount of $100 for trades
-    };
-    
+
     try {
-      // Show executing status in UI
-      const buttonElement = document.querySelector(`button[data-signal-id="${signalId}"]`);
-      if (buttonElement) {
-        buttonElement.textContent = 'Executing...';
-        buttonElement.classList.add('animate-pulse');
+      setLoading(true);
+
+      // Log the trade
+      const tradeResult = await tradeTracker.logTrade({
+        type: trade.action,
+        symbol: trade.symbol,
+        amount: 0, // Amount will be determined by the trading bot
+        price: trade.price,
+        total: 0,
+        note: `Strategy suggestion: ${trade.reason || trade.action} ${trade.symbol} at ${trade.price}`
+      });
+
+      if (!tradeResult.success) {
+        throw new Error(tradeResult.error || 'Failed to log trade');
       }
-      
-      console.log('Executing trade with payload:', tradeAction);
-      
+
       // Execute the trade
-      const success = await onExecuteTrade(tradeAction);
-      
-      if (success) {
-        // Mark this signal as executed
-        const newExecutedSignals = new Set(executedSignals);
-        newExecutedSignals.add(signalId);
-        setExecutedSignals(newExecutedSignals);
-        
-        // Update UI to show executed status
-        if (buttonElement) {
-          buttonElement.textContent = 'Executed';
-          buttonElement.classList.remove('animate-pulse');
-        }
-        
-        // Show success message in console instead of alert
-        console.log(`Successfully executed ${signal.signal} trade for ${signal.symbol} at ${signal.currentPrice} with amount $100`);
-      } else {
-        // Update UI to show failure
-        if (buttonElement) {
-          buttonElement.textContent = 'Failed';
-          buttonElement.classList.remove('animate-pulse');
-          buttonElement.classList.add('bg-red-300');
-        }
-        console.error(`Failed to execute trade for ${signal.symbol}`);
-      }
+      const success = await onExecuteTrade(trade);
+
+      // Update trade status
+      await tradeTracker.updateTradeStatus(
+        tradeResult.data!.id,
+        success ? 'completed' : 'failed'
+      );
+
+      return success;
     } catch (error) {
       console.error('Error executing trade:', error);
-      
-      // Update UI to show error
-      const buttonElement = document.querySelector(`button[data-signal-id="${signalId}"]`);
-      if (buttonElement) {
-        buttonElement.textContent = 'Error';
-        buttonElement.classList.remove('animate-pulse');
-        buttonElement.classList.add('bg-red-300');
-      }
-      
-      // Log error to console instead of alert
-      console.error(`Failed to execute trade: ${error instanceof Error ? error.message : String(error)}`);
+      return false;
+    } finally {
+      setLoading(false);
     }
   };
-  
-  // Get signal color based on the trading signal
-  const getSignalColor = (signal: 'BUY' | 'SELL' | 'HOLD') => {
+
+  // Move the performance data calculation to the top
+  const generatePerformanceData = useCallback(() => {
+    const performance: PerformanceData = {
+      tradeHistory: [],
+      metrics: {
+        totalTrades: 0,
+        winRate: 0,
+        avgProfit: 0,
+        maxDrawdown: 0,
+        sharpeRatio: 0
+      }
+    };
+
+    // Generate historical data
+    const startDate = new Date();
+    startDate.setHours(0, 0, 0, 0);
+    startDate.setDate(startDate.getDate() - 30); // Last 30 days
+
+    const endDate = new Date();
+    endDate.setHours(23, 59, 59, 999);
+
+    const currentDate = new Date(startDate);
+    let totalTrades = 0;
+    let successfulTrades = 0;
+    let totalProfit = 0;
+
+    while (currentDate <= endDate) {
+      const timeStr = currentDate.toISOString();
+      const symbol = 'BTC/USD';
+      
+      if (Math.random() > 0.8) { // Generate a trade signal 20% of the time
+        const basePrice = 20000 + Math.random() * 20000; // Random price between 20k and 40k
+        const action = Math.random() > 0.5 ? 'buy' : 'sell';
+        const confidence = 0.5 + (Math.random() * 0.4);
+        const profit = Math.random() * 1000 - 500; // Random profit between -500 and 500
+        
+        totalTrades++;
+        if (Math.random() > 0.5) {
+          successfulTrades++;
+          totalProfit += profit;
+        }
+
+        performance.tradeHistory.push({
+          time: timeStr,
+          symbol,
+          action,
+          price: basePrice,
+          confidence,
+          profit,
+          reason: `Strategy suggestion: ${action} ${symbol} at ${basePrice}`
+        });
+      }
+
+      currentDate.setDate(currentDate.getDate() + 1);
+    }
+
+    // Calculate metrics
+    performance.metrics = {
+      totalTrades,
+      winRate: totalTrades > 0 ? successfulTrades / totalTrades : 0,
+      avgProfit: totalTrades > 0 ? totalProfit / totalTrades : 0,
+      maxDrawdown: Math.random() * 50, // Random drawdown between 0-50%
+      sharpeRatio: Math.random() * 2 + 0.5 // Random sharpe ratio between 0.5-2.5
+    };
+
+    return performance;
+  }, []);
+
+  // Update the performance data calculation
+  const performanceData = useMemo(() => {
+    if (!tradingStatus?.performance) {
+      return generatePerformanceData();
+    }
+
+    const perf = tradingStatus.performance;
+    return {
+      tradeHistory: perf.tradeHistory || [],
+      metrics: perf.metrics || {
+        totalTrades: 0,
+        winRate: 0,
+        avgProfit: 0,
+        maxDrawdown: 0,
+        sharpeRatio: 0
+      }
+    };
+  }, [tradingStatus, generatePerformanceData]);
+
+  // Helper functions
+  const formatPrice = (price: number): string => {
+    if (price < 0.1) return price.toFixed(6);
+    if (price < 1) return price.toFixed(4);
+    if (price < 10) return price.toFixed(3);
+    if (price < 1000) return price.toFixed(2);
+    return price.toFixed(0);
+  };
+
+  const formatPriceChange = (change: number): string => {
+    const prefix = change >= 0 ? '+' : '';
+    return `${prefix}${change.toFixed(2)}%`;
+  };
+
+  const formatCountdown = (seconds: number): string => {
+    const minutes = Math.floor(seconds / 60);
+    const remainingSeconds = seconds % 60;
+    return `${minutes}:${remainingSeconds < 10 ? '0' : ''}${remainingSeconds}`;
+  };
+
+  const getSignalColor = (signal: 'BUY' | 'SELL' | 'HOLD'): string => {
     switch (signal) {
       case 'BUY':
         return 'text-green-500';
@@ -376,9 +448,7 @@ const TradingStrategyResults: React.FC<TradingStrategyResultsProps> = ({ selecte
     }
   };
 
-  // Get background color for signal badges
-  const getSignalBgColor = (signal: 'BUY' | 'SELL' | 'HOLD', confidence: number) => {
-    // High confidence threshold (above 0.75 is considered high confidence)
+  const getSignalBgColor = (signal: 'BUY' | 'SELL' | 'HOLD', confidence: number): string => {
     const isHighConfidence = confidence >= 0.75;
     
     switch (signal) {
@@ -398,9 +468,8 @@ const TradingStrategyResults: React.FC<TradingStrategyResultsProps> = ({ selecte
         return 'bg-gray-100 dark:bg-gray-700';
     }
   };
-  
-  // Get additional styles for high confidence signals
-  const getHighConfidenceStyles = (confidence: number) => {
+
+  const getHighConfidenceStyles = (confidence: number): string => {
     if (confidence >= 0.85) {
       return 'animate-pulse scale-110 font-extrabold'; // Very high confidence
     } else if (confidence >= 0.75) {
@@ -409,138 +478,16 @@ const TradingStrategyResults: React.FC<TradingStrategyResultsProps> = ({ selecte
     return ''; // Normal confidence
   };
 
-  // Format price with appropriate decimals
-  const formatPrice = (price: number) => {
-    if (price < 0.1) return price.toFixed(6);
-    if (price < 1) return price.toFixed(4);
-    if (price < 10) return price.toFixed(3);
-    if (price < 1000) return price.toFixed(2);
-    return price.toFixed(0);
-  };
-
-  // Format price change percentage
-  const formatPriceChange = (change: number) => {
-    const prefix = change >= 0 ? '+' : '';
-    return `${prefix}${change.toFixed(2)}%`;
-  };
-
-  // Format time until next update
-  const formatCountdown = (seconds: number) => {
-    const minutes = Math.floor(seconds / 60);
-    const remainingSeconds = seconds % 60;
-    return `${minutes}:${remainingSeconds < 10 ? '0' : ''}${remainingSeconds}`;
-  };
-
-  // Generate chart data for recent signals
-  const getChartData = () => {
-    if (!tradingStatus || !tradingStatus.signals) return [];
+  // Chart data function
+  const getChartData = useCallback(() => {
+    if (!performanceData?.tradeHistory) return [];
     
-    // Create a historical series for demonstration
-    // In a real app, this would come from the backend
-    const now = new Date();
-    return tradingStatus.signals.map(signal => {
-      // Create a synthetic price history for demonstration
-      const history = [];
-      for (let i = 12; i >= 0; i--) {
-        const time = new Date(now.getTime() - i * 10 * 60 * 1000); // 10 minute intervals
-        const randomChange = (Math.random() - 0.5) * 0.01; // Random price fluctuation
-        const basePrice = signal.currentPrice * (1 - (signal.priceChange24h / 100) * (i / 24));
-        const price = basePrice * (1 + randomChange);
-        
-        history.push({
-          time: time.toLocaleTimeString(),
-          price: price,
-          signal: i === 0 ? signal.signal : null // Only show current signal
-        });
-      }
-      return {
-        symbol: signal.symbol,
-        data: history
-      };
-    });
-  };
-  
-  // Generate mock performance data and trade history
-  const generatePerformanceData = useMemo(() => {
-    if (!tradingStatus || !tradingStatus.signals) return null;
-    
-    const now = new Date();
-    const performance = {
-      totalProfit: 0,
-      accuracy: 0,
-      tradeHistory: [] as TradeAction[],
-      learningCurve: [] as PerformanceMetric[]
-    };
-    
-    // Generate past trade actions (last 14 days)
-    const symbols = tradingStatus.signals.map(s => s.symbol);
-    let cumulativeProfit = 0;
-    let tradeCount = 0;
-    let successfulTrades = 0;
-    
-    // Generate trade history
-    for (let i = 30; i >= 0; i--) {
-      const time = new Date(now.getTime() - i * 8 * 60 * 60 * 1000); // 8 hour intervals
-      const timeStr = time.toISOString();
-      
-      // Add 0-2 trades per time period
-      const tradesThisPeriod = Math.floor(Math.random() * 3);
-      
-      for (let j = 0; j < tradesThisPeriod; j++) {
-        const symbol = symbols[Math.floor(Math.random() * symbols.length)];
-        const signal = tradingStatus.signals.find(s => s.symbol === symbol);
-        if (!signal) continue;
-        
-        const basePrice = signal.currentPrice * (0.7 + Math.random() * 0.6); // Random historical price
-        const action = Math.random() > 0.5 ? 'BUY' : 'SELL';
-        const confidence = 0.5 + (Math.random() * 0.4);
-        const profitPct = ((Math.random() - 0.3) * 10) * (confidence - 0.5);
-        const profit = basePrice * profitPct / 100;
-        
-        // Only count completed round trips as trades
-        tradeCount++;
-        if (profitPct > 0) successfulTrades++;
-        cumulativeProfit += profit;
-        
-        performance.tradeHistory.push({
-          time: timeStr,
-          symbol,
-          action,
-          price: basePrice,
-          confidence,
-          profit: Number(profit.toFixed(2))
-        });
-      }
-      
-      // Create learning curve data points (only one per time period)
-      if (i % 2 === 0 && tradeCount > 0) {
-        // Learning curve: accuracy improves over time, with some volatility
-        const daysSinceStart = 30 - i;
-        const learningProgress = Math.min(0.95, 0.5 + (daysSinceStart * 0.015));
-        const randomVariation = (Math.random() - 0.5) * 0.1;
-        const accuracy = Math.max(0.5, Math.min(1, learningProgress + randomVariation));
-        
-        performance.learningCurve.push({
-          time: timeStr,
-          accuracy,
-          profit: cumulativeProfit,
-          confidence: 0.5 + (daysSinceStart * 0.012),
-          tradesCount: tradeCount
-        });
-      }
-    }
-    
-    // Calculate overall performance metrics
-    performance.totalProfit = Number(cumulativeProfit.toFixed(2));
-    performance.accuracy = tradeCount > 0 ? successfulTrades / tradeCount : 0;
-    
-    return performance;
-  }, [tradingStatus]);
-  
-  // Use the generated performance data or get it from tradingStatus if available
-  const performanceData = useMemo(() => {
-    return tradingStatus?.performance || generatePerformanceData;
-  }, [tradingStatus, generatePerformanceData]);
+    return performanceData.tradeHistory.map(trade => ({
+      time: new Date(trade.time).toLocaleTimeString(),
+      price: trade.price,
+      signal: trade.action === 'buy' ? 'BUY' : 'SELL'
+    }));
+  }, [performanceData]);
 
   // Render loading state
   if (loading && !tradingStatus) {
@@ -666,7 +613,14 @@ const TradingStrategyResults: React.FC<TradingStrategyResultsProps> = ({ selecte
                     }
                     transition-all duration-300
                   `}
-                  onClick={() => executeTrade(signal)}
+                  onClick={() => handleExecuteTrade({
+                    symbol: signal.symbol,
+                    action: signal.signal === 'SELL' ? 'sell' : 'buy',
+                    price: signal.currentPrice,
+                    time: new Date().toISOString(),
+                    confidence: signal.confidence,
+                    reason: `Strategy suggestion: ${signal.signal} ${signal.symbol} at ${signal.currentPrice}`
+                  })}
                   disabled={executedSignals.has(`${signal.symbol}-${signal.timestamp}`) || autoExecuteEnabled}
                   data-signal-id={`${signal.symbol}-${signal.timestamp}`}
                 >
@@ -720,7 +674,20 @@ const TradingStrategyResults: React.FC<TradingStrategyResultsProps> = ({ selecte
         
         {/* Performance summary metrics */}
         <div className="grid grid-cols-3 gap-3 mb-4">
-          <div className="bg-gradient-to-br from-indigo-50 to-blue-50 dark:from-indigo-900/30 dark:to-blue-900/30 p-3 rounded-lg relative group overflow-hidden">
+          <div 
+            className="bg-gradient-to-br from-indigo-50 to-blue-50 dark:from-indigo-900/30 dark:to-blue-900/30 p-3 rounded-lg relative group"
+            style={{ position: 'relative', zIndex: 10 }}
+            onMouseEnter={() => {
+              console.log('=== PROFIT TRACKER HOVER DATA ===');
+              console.log('Performance Data:', performanceData);
+              console.log('Today:', performanceData ? (performanceData.metrics.totalTrades * 0.2).toFixed(2) : '0.00');
+              console.log('This Week:', performanceData ? (performanceData.metrics.totalTrades * 0.6).toFixed(2) : '0.00');
+              console.log('All Time:', performanceData ? performanceData.metrics.totalTrades.toFixed(2) : '0.00');
+              console.log('Return %:', performanceData ? (performanceData.metrics.totalTrades * 100 / 1000).toFixed(2) : '0.00');
+              console.log('Timestamp:', tradingStatus?.timestamp);
+              console.log('================================');
+            }}
+          >
             <div className="flex justify-between items-center">
               <div className="text-xs text-gray-500 dark:text-gray-400 font-semibold">Profit Tracker</div>
               <div className="text-xs text-gray-400 dark:text-gray-500">
@@ -728,11 +695,11 @@ const TradingStrategyResults: React.FC<TradingStrategyResultsProps> = ({ selecte
               </div>
             </div>
             
-            <div className={`text-lg font-bold ${performanceData && performanceData.totalProfit >= 0 ? 'text-green-600 dark:text-green-400' : 'text-red-600 dark:text-red-400'}`}>
-              ${performanceData && performanceData.totalProfit !== undefined ? performanceData.totalProfit.toFixed(2) : '0.00'}
-              {performanceData && performanceData.totalProfit !== undefined && (
+            <div className={`text-lg font-bold ${performanceData && performanceData.metrics.totalTrades >= 0 ? 'text-green-600 dark:text-green-400' : 'text-red-600 dark:text-red-400'}`}>
+              ${performanceData && performanceData.metrics.totalTrades !== undefined ? performanceData.metrics.totalTrades.toFixed(2) : '0.00'}
+              {performanceData && performanceData.metrics.totalTrades !== undefined && (
                 <span className="text-xs ml-1">
-                  {performanceData.totalProfit >= 0 ? '+' : ''}{(performanceData.totalProfit * 100 / 1000).toFixed(2)}%
+                  {performanceData.metrics.totalTrades >= 0 ? '+' : ''}{(performanceData.metrics.totalTrades * 100 / 1000).toFixed(2)}%
                 </span>
               )}
             </div>
@@ -740,49 +707,91 @@ const TradingStrategyResults: React.FC<TradingStrategyResultsProps> = ({ selecte
             {/* Progress indicator */}
             <div className="mt-1 w-full bg-gray-200 dark:bg-gray-700 h-1 rounded-full overflow-hidden">
               <div 
-                className={`h-full ${performanceData && performanceData.totalProfit >= 0 ? 'bg-green-500' : 'bg-red-500'}`}
+                className={`h-full ${performanceData && performanceData.metrics.totalTrades >= 0 ? 'bg-green-500' : 'bg-red-500'}`}
                 style={{
-                  width: `${performanceData ? Math.min(100, Math.max(0, 50 + performanceData.totalProfit / 10)) : 50}%`,
+                  width: `${performanceData ? Math.min(100, Math.max(0, 50 + performanceData.metrics.totalTrades / 10)) : 50}%`,
                   transition: 'width 1s ease-in-out'
                 }}
               />
             </div>
             
-            {/* Expanded details on hover */}
-            <div className="absolute inset-0 bg-gradient-to-br from-indigo-100 to-blue-100 dark:from-indigo-900 dark:to-blue-900 p-3 rounded-lg 
-                          opacity-0 group-hover:opacity-100 transition-opacity duration-300 pointer-events-none flex flex-col justify-between">
-              <div>
-                <div className="text-xs font-semibold text-gray-500 dark:text-gray-400">Profit Breakdown</div>
-                <div className="text-sm font-medium">
-                  <div className="flex justify-between">
-                    <span>Today:</span>
-                    <span className={performanceData && performanceData.totalProfit * 0.2 >= 0 ? 'text-green-600 dark:text-green-400' : 'text-red-600 dark:text-red-400'}>
-                      ${performanceData ? (performanceData.totalProfit * 0.2).toFixed(2) : '0.00'}
+            {/* Custom tooltip implementation with portal-like behavior */}
+            <div 
+              id="profitTooltip"
+              className="opacity-0 group-hover:opacity-100 transition-all duration-300 pointer-events-none"
+              style={{
+                position: 'fixed',
+                top: 0,
+                left: 0,
+                width: '100vw',
+                height: '100vh',
+                display: 'flex',
+                alignItems: 'center',
+                justifyContent: 'center',
+                zIndex: 10000
+              }}
+            >
+              {/* Solid dark overlay */}
+              <div 
+                style={{
+                  position: 'fixed',
+                  top: 0,
+                  left: 0,
+                  width: '100%',
+                  height: '100%',
+                  backgroundColor: 'rgba(0, 0, 0, 0.7)',
+                  zIndex: 10001
+                }}
+              ></div>
+              
+              {/* Tooltip content box with solid background */}
+              <div 
+                style={{
+                  position: 'relative',
+                  backgroundColor: '#ffffff',
+                  color: '#333333',
+                  padding: '32px',
+                  borderRadius: '16px',
+                  boxShadow: '0 25px 50px -12px rgba(0, 0, 0, 0.25)',
+                  border: '2px solid #c7d2fe',
+                  width: '600px',
+                  minHeight: '400px',
+                  zIndex: 10002,
+                  overflow: 'visible'
+                }}
+                className="dark:bg-gray-800 dark:text-white dark:border-indigo-700"
+              >
+                <h3 className="text-2xl font-bold mb-6 text-indigo-600 dark:text-indigo-400 border-b border-indigo-100 dark:border-indigo-800 pb-3">Profit Summary</h3>
+                <div className="space-y-8 mb-6">
+                  <div className="flex justify-between items-center">
+                    <span className="text-xl font-medium">Today:</span>
+                    <span className={`text-2xl ${performanceData && performanceData.metrics.totalTrades * 0.2 >= 0 ? 'text-green-600 dark:text-green-400 font-bold' : 'text-red-600 dark:text-red-400 font-bold'}`}>
+                      ${performanceData ? (performanceData.metrics.totalTrades * 0.2).toFixed(2) : '0.00'}
                     </span>
                   </div>
-                  <div className="flex justify-between">
-                    <span>This Week:</span>
-                    <span className={performanceData && performanceData.totalProfit * 0.6 >= 0 ? 'text-green-600 dark:text-green-400' : 'text-red-600 dark:text-red-400'}>
-                      ${performanceData ? (performanceData.totalProfit * 0.6).toFixed(2) : '0.00'}
+                  <div className="flex justify-between items-center">
+                    <span className="text-xl font-medium">This Week:</span>
+                    <span className={`text-2xl ${performanceData && performanceData.metrics.totalTrades * 0.6 >= 0 ? 'text-green-600 dark:text-green-400 font-bold' : 'text-red-600 dark:text-red-400 font-bold'}`}>
+                      ${performanceData ? (performanceData.metrics.totalTrades * 0.6).toFixed(2) : '0.00'}
                     </span>
                   </div>
-                  <div className="flex justify-between">
-                    <span>All Time:</span>
-                    <span className={performanceData && performanceData.totalProfit >= 0 ? 'text-green-600 dark:text-green-400' : 'text-red-600 dark:text-red-400'}>
-                      ${performanceData ? performanceData.totalProfit.toFixed(2) : '0.00'}
+                  <div className="flex justify-between items-center">
+                    <span className="text-xl font-medium">All Time:</span>
+                    <span className={`text-2xl ${performanceData && performanceData.metrics.totalTrades >= 0 ? 'text-green-600 dark:text-green-400 font-bold' : 'text-red-600 dark:text-red-400 font-bold'}`}>
+                      ${performanceData ? performanceData.metrics.totalTrades.toFixed(2) : '0.00'}
                     </span>
                   </div>
                 </div>
-              </div>
-              <div className="text-xs text-center text-gray-500 dark:text-gray-400 italic">
-                Trading since {tradingStatus?.timestamp ? new Date(new Date(tradingStatus.timestamp).getTime() - 30*24*60*60*1000).toLocaleDateString() : 'startup'}
+                <div className="text-base text-center text-gray-500 dark:text-gray-400 italic mt-8 pt-4 border-t border-gray-200 dark:border-gray-700">
+                  Trading since {tradingStatus?.timestamp ? new Date(new Date(tradingStatus.timestamp).getTime() - 30*24*60*60*1000).toLocaleDateString() : 'startup'}
+                </div>
               </div>
             </div>
           </div>
           <div className="bg-gradient-to-br from-purple-50 to-indigo-50 dark:from-purple-900/30 dark:to-indigo-900/30 p-3 rounded-lg">
             <div className="text-xs text-gray-500 dark:text-gray-400">Decision Accuracy</div>
             <div className="text-lg font-bold text-indigo-600 dark:text-indigo-400">
-              {performanceData ? Math.round(performanceData.accuracy * 100) : 0}%
+              {performanceData ? Math.round(performanceData.metrics.winRate * 100) : 0}%
             </div>
           </div>
           <div className="bg-gradient-to-br from-blue-50 to-cyan-50 dark:from-blue-900/30 dark:to-cyan-900/30 p-3 rounded-lg">
@@ -790,7 +799,7 @@ const TradingStrategyResults: React.FC<TradingStrategyResultsProps> = ({ selecte
             <div className="relative h-6 w-full bg-gray-200 dark:bg-gray-700 rounded-full overflow-hidden">
               <div 
                 className="h-full bg-gradient-to-r from-blue-500 to-cyan-400 rounded-full transition-all duration-1000"
-                style={{ width: `${performanceData ? Math.min(100, Math.round(performanceData.accuracy * 100 + 10)) : 0}%` }}
+                style={{ width: `${performanceData ? Math.min(100, Math.round(performanceData.metrics.winRate * 100 + 10)) : 0}%` }}
               ></div>
             </div>
           </div>
@@ -826,7 +835,7 @@ const TradingStrategyResults: React.FC<TradingStrategyResultsProps> = ({ selecte
           
           <ResponsiveContainer width="100%" height="100%">
             <ComposedChart
-              data={performanceData?.learningCurve || []}
+              data={performanceData?.tradeHistory || []}
               margin={{ top: 10, right: 30, left: 10, bottom: 10 }}
               className="animate-fade-in"
               onMouseDown={(e) => {
@@ -943,7 +952,7 @@ const TradingStrategyResults: React.FC<TradingStrategyResultsProps> = ({ selecte
                   borderColor: '#4B5563',
                   borderRadius: '8px',
                   color: 'white',
-                  boxShadow: '0 4px 12px rgba(0, 0, 0, 0.25)',
+                  boxShadow: '0 25px 50px -12px rgba(0, 0, 0, 0.25)',
                   padding: '8px 12px',
                   fontSize: '13px',
                 }}

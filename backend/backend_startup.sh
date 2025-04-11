@@ -37,31 +37,9 @@ cd "${BACKEND_DIR}"
 # Make sure database directory exists
 mkdir -p "${BACKEND_DIR}/data/db"
 
-# Set Python path to include bot directory
-export PYTHONPATH=$PYTHONPATH:/opt/lampp/htdocs:/opt/lampp/htdocs/bot
-
-# Make sure we're in the backend directory
-if [ ! -d "venv" ]; then
-    echo "Error: Script must be run from the backend directory"
-    exit 1
-fi
-
-# Activate virtual environment
-source venv/bin/activate
-
 # Initialize database
 echo -e "\n${YELLOW}Initializing database...${NC}"
-python -c "
-import os
-import sys
-import logging
-
-# Add bot directory to Python path
-sys.path.insert(0, '/opt/lampp/htdocs/bot')
-
-from models.model import Model
-print('Successfully imported Model')
-" > "${LOG_DIR}/db_init.log" 2>&1
+python init_db.py > "${LOG_DIR}/db_init.log" 2>&1
 if [ $? -eq 0 ]; then
     echo -e "${GREEN}✓ Database initialized successfully${NC}"
 else
@@ -116,7 +94,7 @@ echo -e "${BLUE}=======================================================${NC}"
 if [ "$1" == "run_server" ]; then
     echo -e "\n${YELLOW}Starting the FastAPI backend server...${NC}"
     cd "${BACKEND_DIR}"
-    python main.py > "${LOG_DIR}/fastapi.log" 2>&1 &
+    python run.py > "${LOG_DIR}/fastapi.log" 2>&1 &
     FASTAPI_PID=$!
     echo -e "${GREEN}✓ FastAPI server started with PID: ${FASTAPI_PID}${NC}"
 fi

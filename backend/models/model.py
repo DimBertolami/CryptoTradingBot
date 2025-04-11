@@ -1,24 +1,17 @@
-import os
 import sys
-import logging
+import os
 
-# Add root directory to Python path
-sys.path.append(os.path.dirname(os.path.dirname(os.path.dirname(os.path.abspath(__file__)))))
-
-from sqlalchemy import create_engine
-from database import Base
-from models.trading_models import Trade, TradingDecision, ProfitSummary, BotThought, BotJoke
+#from bot.models.models import models
+from keras.layers import Dense, Embedding, Dropout, Bidirectional, SimpleRNN, Conv1D, MaxPooling1D, Flatten, GlobalAveragePooling1D, BatchNormalization, Activation, Input, Dense, LSTM, Dropout, Bidirectional, GRU, SimpleRNN, Conv1D, MaxPooling1D, Flatten, GlobalAveragePooling1D, BatchNormalization, Activation, Input, Dense, LSTM, Dropout, Bidirectional, GRU, SimpleRNN, Conv1D, MaxPooling1D, Flatten, GlobalAveragePooling1D, BatchNormalization, Activation
+from keras.models import Sequential, load_model
+from keras.optimizers import Adam, RMSprop, Adagrad, Adadelta, Adamax, Nadam
+from keras.callbacks import EarlyStopping, ModelCheckpoint, ReduceLROnPlateau, CSVLogger, TensorBoard
+#from keras.utils import to_categorical, plot_model, to_categorical, normalize, get_user_data
 from bot.models.xgboost import train_xgboost
 from bot.models.randomForest import train_random_forest
 from bot.models.rnn_lstm import train_RNNLSTM
 from bot.models.lstm import train_LSTM
-from data.trading_db import record_bot_thought, record_trading_decision, get_total_profit_stats
 
-from tensorflow.keras.layers import Dense, Embedding, Dropout, Bidirectional, SimpleRNN, Conv1D, MaxPooling1D, Flatten, GlobalAveragePooling1D, BatchNormalization, Activation, Input, Dense, LSTM, Dropout, Bidirectional, GRU, SimpleRNN, Conv1D, MaxPooling1D, Flatten, GlobalAveragePooling1D, BatchNormalization, Activation
-from tensorflow.keras.models import Sequential, load_model
-from tensorflow.keras.optimizers import Adam, RMSprop, Adagrad, Adadelta, Adamax, Nadam
-from tensorflow.keras.callbacks import EarlyStopping, ModelCheckpoint, ReduceLROnPlateau, CSVLogger, TensorBoard
-import tensorflow as tf
 
 class Model:
     def __init__(self):

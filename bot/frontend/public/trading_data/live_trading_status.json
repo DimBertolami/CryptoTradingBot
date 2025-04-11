@@ -1,52 +1,52 @@
 {
-  "timestamp": "2025-04-06T09:26:37.625320",
-  "model_id": "inceptiontime_v1.0",
+  "timestamp": "2025-04-05T22:59:01.113453",
+  "model_id": "temporal_fusion_transformer_v1",
   "signals": [
     {
       "symbol": "BTC/USDT",
-      "currentPrice": 52584.89,
-      "signal": "BUY",
-      "confidence": 0.7206194080709388,
-      "timestamp": "2025-04-06T09:26:37.625320",
-      "priceChange24h": -11.62
+      "currentPrice": 51338.64,
+      "signal": "SELL",
+      "confidence": 0.67844465100547,
+      "timestamp": "2025-04-05T22:59:01.113453",
+      "priceChange24h": -4.75
     },
     {
       "symbol": "ETH/USDT",
-      "currentPrice": 3057.51,
+      "currentPrice": 3010.22,
       "signal": "BUY",
-      "confidence": 0.6866856844656806,
-      "timestamp": "2025-04-06T09:26:37.625320",
-      "priceChange24h": -16.67
+      "confidence": 0.6224235060343548,
+      "timestamp": "2025-04-05T22:59:01.113453",
+      "priceChange24h": -12.51
     },
     {
       "symbol": "SOL/USDT",
-      "currentPrice": 146.58,
-      "signal": "SELL",
-      "confidence": 0.559981421884013,
-      "timestamp": "2025-04-06T09:26:37.625320",
-      "priceChange24h": -15.65
+      "currentPrice": 145.73,
+      "signal": "HOLD",
+      "confidence": 0.6110889489330777,
+      "timestamp": "2025-04-05T22:59:01.113453",
+      "priceChange24h": -3.08
     },
     {
       "symbol": "ADA/USDT",
-      "currentPrice": 0.50813267,
+      "currentPrice": 0.53514316,
       "signal": "SELL",
-      "confidence": 0.6552181244124204,
-      "timestamp": "2025-04-06T09:26:37.625320",
-      "priceChange24h": -15.66
+      "confidence": 0.6474267172441657,
+      "timestamp": "2025-04-05T22:59:01.113453",
+      "priceChange24h": -9.28
     },
     {
       "symbol": "BNB/USDT",
-      "currentPrice": 576.02,
+      "currentPrice": 557.6,
       "signal": "SELL",
-      "confidence": 0.7018470606210729,
-      "timestamp": "2025-04-06T09:26:37.625320",
-      "priceChange24h": -6.13
+      "confidence": 0.6091298338884533,
+      "timestamp": "2025-04-05T22:59:01.113453",
+      "priceChange24h": -9.42
     }
   ],
   "autoRefresh": true,
   "thoughts": [
     "Not enough historical data yet. Learning in progress...",
-    "Market is mixed. No clear trend direction yet.",
-    "Using model: inceptiontime_v1.0. Analyzing price patterns..."
+    "Market seems bearish. Generating more sell signals than buys.",
+    "Using model: temporal_fusion_transformer_v1. Analyzing price patterns..."
   ]
 }

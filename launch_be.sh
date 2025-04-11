@@ -45,12 +45,17 @@ DETAIL_MODE="minimal"
 # Function to show help
 show_help() {
     echo "
+Backend launcher written by Dimitri Bertolami
+_____________________________________________"
+    echo "
 Available commands:"
     echo "  h - Show this help message"
     echo "  r - Reload the backend server"
     echo "  d - Toggle between detailed and minimal logging"
     echo "  k - Kill any processes using port $PORT and restart"
     echo "  q - Quit the server"
+    echo "  u - Show backend URL"
+    echo "  o - Open backend URL in browser"
     echo "
 Current settings:"
     echo "  Port: $PORT"
@@ -96,6 +101,12 @@ while true; do
             echo "Shutting down..."
             kill $UVICORN_PID 2>/dev/null
             exit 0
+            ;;
+        u|U)
+            echo "Backend URL: http://localhost:$PORT/"
+            ;;
+        o|O)
+            xdg-open "http://localhost:$PORT/"
             ;;
     esac
 done

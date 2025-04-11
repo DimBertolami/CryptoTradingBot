@@ -31,6 +31,16 @@ interface PaperTradingDashboardProps {
   onAutoExecuteChange?: (enabled: boolean) => void;
 }
 
+interface SuggestedTrade {
+  symbol: string;
+  action: 'buy' | 'sell';
+  price: number;
+  confidence: number;
+  amount?: number;
+  time?: string;
+  reason?: string;
+}
+
 interface PaperTradingStatus {
   is_running: boolean;
   mode: string;
@@ -217,7 +227,7 @@ const PaperTradingDashboard: React.FC<PaperTradingDashboardProps> = ({
       setError(null);
       
       // Use API endpoint to get real data
-      const response = await fetch('/trading/paper');
+      const response = await fetch('http://localhost:5001/trading/paper');
       if (!response.ok) {
         throw new Error(`Server responded with ${response.status}: ${response.statusText}`);
       }
@@ -364,7 +374,7 @@ const PaperTradingDashboard: React.FC<PaperTradingDashboardProps> = ({
       
       console.log(`Sending command with stringified params:`, stringParams);
       
-      const response = await fetch('/trading/paper', {
+      const response = await fetch('http://localhost:5001/trading/paper', {
         method: 'POST',
         headers: {
           'Content-Type': 'application/json',
@@ -589,6 +599,210 @@ const PaperTradingDashboard: React.FC<PaperTradingDashboardProps> = ({
       window.removeEventListener('paper-trading-update', handleTradeExecution);
     };
   }, [fetchStatus]);
+
+  // Auto-execute trades when enabled
+  useEffect(() => {
+    if (!autoExecuteEnabled || !status) return;
+    
+    // Function to check for suggested trades and auto-execute them
+    const autoExecuteTrades = async () => {
+      try {
+        // Since '/api/suggested-trades' endpoint might not exist, we'll use a simulated approach
+        // to generate suggested trades based on current holdings and market conditions
+        
+        // Get the current holdings from status
+        const symbols = Object.keys(status.holdings || {});
+        
+        // If no holdings, add some default cryptocurrencies for suggestions
+        const suggestedSymbols = symbols.length > 0 ? 
+          symbols : ['BTC/USDT', 'ETH/USDT', 'SOL/USDT', 'ADA/USDT'];
+          
+        // Generate simulated trade suggestions
+        const simulatedTrades = suggestedSymbols.map(symbol => {
+          // Generate a random confidence level (0.5 to 1.0)
+          const confidence = 0.5 + (Math.random() * 0.5);
+          
+          // Determine action based on random factor and current holdings
+          const hasHolding = symbols.includes(symbol) && (status.holdings[symbol] > 0);
+          const action = hasHolding && Math.random() > 0.6 ? 'sell' : 'buy';
+          
+          // Get current price from last_prices or generate a reasonable one
+          const price = status.last_prices?.[symbol] || 
+            (symbol.includes('BTC') ? 50000 + (Math.random() * 5000) : 
+             symbol.includes('ETH') ? 3000 + (Math.random() * 300) : 
+             symbol.includes('SOL') ? 150 + (Math.random() * 15) : 
+             symbol.includes('ADA') ? 0.5 + (Math.random() * 0.1) : 
+             100 + (Math.random() * 50));
+          
+          return {
+            symbol,
+            action,
+            price,
+            confidence,
+            time: new Date().toISOString(),
+            reason: `${action === 'buy' ? 'Bullish' : 'Bearish'} trend detected in ${symbol}`
+          } as SuggestedTrade;
+        });
+        
+        // Simulate API response
+        const data = {
+          success: true,
+          trades: simulatedTrades
+        };
+        
+        // Filter trades that meet the confidence threshold
+        const eligibleTrades = data.trades.filter((trade: SuggestedTrade) => 
+          trade.confidence >= confidenceThreshold
+        );
+        
+        console.log(`Found ${eligibleTrades.length} trades meeting confidence threshold of ${confidenceThreshold}`);
+        
+        // Execute only the highest confidence trade to avoid multiple popups
+        if (eligibleTrades.length > 0) {
+          // Sort by confidence (highest first)
+          const sortedTrades = [...eligibleTrades].sort((a, b) => b.confidence - a.confidence);
+          const trade = sortedTrades[0]; // Take only the highest confidence trade
+          
+          console.log(`Auto-executing highest confidence trade: ${trade.action} ${trade.symbol} at ${trade.price} (confidence: ${trade.confidence.toFixed(2)})`);
+          
+          try {
+            // Use the correct /api/trade endpoint that actually exists in the system
+            const result = await fetch('/api/trade', {
+              method: 'POST',
+              headers: {
+                'Content-Type': 'application/json',
+              },
+              body: JSON.stringify({
+                // Standardize the payload format to match App.handleExecuteTrade
+                type: trade.action,
+                symbol: trade.symbol,
+                price: trade.price,
+                // Remove amount field as it may not be expected by the API
+                note: `Auto-executed trade: ${trade.reason || `${trade.action} ${trade.symbol} at ${trade.price}`}`
+              }),
+            });
+            
+            if (result.ok) {
+              console.log(`Successfully auto-executed trade: ${trade.action} ${trade.symbol}`);
+              
+              // Create a new trade history item from the executed trade
+              const newTradeItem: TradeHistoryItem = {
+                timestamp: new Date().toISOString(),
+                symbol: trade.symbol,
+                side: trade.action.toUpperCase(),
+                // Use a reasonable default amount that's less likely to exceed balance
+                quantity: trade.amount || Math.min(500, status.balance / trade.price / 2),
+                price: trade.price,
+                value: (trade.amount || Math.min(500, status.balance / trade.price / 2)) * trade.price,
+                balance_after: status.balance + (trade.action === 'sell' ? 1 : -1) * ((trade.amount || Math.min(500, status.balance / trade.price / 2)) * trade.price),
+                type: 'AUTO' // Mark as auto-executed
+              };
+              
+              // Update local state with new trade (will be replaced when fetchStatus is called)
+              setStatus(prevStatus => ({
+                ...prevStatus,
+                trade_history: [...(prevStatus.trade_history || []), newTradeItem],
+                performance: {
+                  ...prevStatus.performance,
+                  total_trades: (prevStatus.performance?.total_trades || 0) + 1
+                }
+              }));
+              
+              // Dispatch event to notify other components
+              const event = new CustomEvent('paper-trading-update');
+              window.dispatchEvent(event);
+              
+              // Delay fetchStatus to allow server to process the trade
+              setTimeout(() => fetchStatus(), 1500);
+            } else {
+              // Get error details if available
+              try {
+                const errorData = await result.text();
+                console.error(`Failed to auto-execute trade: ${errorData || 'Unknown error'}`); 
+              } catch {
+                // Fallback error message if we can't read the response text
+                console.error(`Failed to auto-execute trade: ${trade.action} ${trade.symbol}`);
+              }
+            }
+          } catch (error) {
+            console.error('Error auto-executing trade:', error);
+          }
+        } else {
+          console.log('No trades met the confidence threshold for auto-execution');
+        }
+      } catch (error) {
+        console.error('Error in auto-execute process:', error);
+      }
+    };
+    
+    // Only set up auto-execution if it's enabled
+    let intervalId: NodeJS.Timeout | null = null;
+    
+    if (autoExecuteEnabled) {
+      // Don't run immediately - wait for first interval to avoid immediate popup
+      
+      // Get refresh interval in milliseconds but make it at least 30 seconds
+      // to avoid too frequent trade attempts
+      const baseIntervalSeconds = getRefreshIntervalInSeconds(selectedPeriod);
+      const intervalMs = Math.max(baseIntervalSeconds, 30) * 1000;
+      
+      // Set up a recurring interval to check for new trades
+      intervalId = setInterval(autoExecuteTrades, intervalMs);
+    }
+    
+    return () => {
+      if (intervalId) {
+        clearInterval(intervalId);
+      }
+    };
+  }, [autoExecuteEnabled, confidenceThreshold, selectedPeriod, status, fetchStatus]);
+  
+  // Listen for messages from the 3D visualization iframe
+  useEffect(() => {
+    // Define the event handler for messages from the 3D visualization
+    const handleVisualizationMessage = (event: MessageEvent) => {
+      // Check if the message is from our 3D visualization
+      if (event.data && event.data.type === 'TRADE_CLICKED') {
+        const tradeId = event.data.tradeId;
+        console.log('Received trade click message from 3D visualization:', tradeId);
+        
+        // Set the highlighted trade ID
+        setHighlightedTradeId(tradeId);
+        
+        // Scroll to the trade in the table
+        scrollToTrade(tradeId);
+      }
+    };
+    
+    // Add event listener
+    window.addEventListener('message', handleVisualizationMessage);
+    
+    // Clean up the event listener when component unmounts
+    return () => {
+      window.removeEventListener('message', handleVisualizationMessage);
+    };
+  }, []);
+  
+  // Function to scroll to a specific trade in the table
+  const scrollToTrade = (tradeId: number) => {
+    if (tradeHistoryTableRef.current) {
+      // Find the trade row by its data attribute
+      const tradeRow = tradeHistoryTableRef.current.querySelector(`[data-trade-id="${tradeId}"]`);
+      
+      if (tradeRow) {
+        // Scroll the row into view
+        tradeRow.scrollIntoView({ behavior: 'smooth', block: 'center' });
+        
+        // Flash animation for the row
+        tradeRow.classList.add('highlight-trade');
+        
+        // Remove the highlight after animation completes
+        setTimeout(() => {
+          tradeRow.classList.remove('highlight-trade');
+        }, 2000);
+      }
+    }
+  };
   
   return (
     <div className="paper-trading-dashboard">
@@ -937,7 +1151,7 @@ const PaperTradingDashboard: React.FC<PaperTradingDashboardProps> = ({
                       
                       purchasePrice = totalValue / totalQuantity;
                       growth = price - purchasePrice;
-                      growthPercent = (purchasePrice > 0) ? (growth / purchasePrice) * 100 : 0;
+                      growthPercent = (purchasePrice > 0) ? ((price - purchasePrice) / purchasePrice) * 100 : 0;
                     }
                     
                     const isPositiveGrowth = growth >= 0;

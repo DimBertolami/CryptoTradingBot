@@ -1,46 +1,26 @@
-import React, { useState, useEffect, useRef, useCallback } from 'react';
-import { 
-  Trash2,
-  ArrowRight,
-  Coins,
-  X,
-  Bitcoin,
-  Feather as Ethereum,
-  Gem,
-  Menu,
-  Sun,
-  Moon,
-  Settings,
-  History,
-  LineChart,
-  Wallet,
-  LayoutDashboard,
-  TrendingUp,
-  DollarSign
-} from 'lucide-react';
+import React, { useState, useEffect, useRef } from 'react';
+import { LayoutDashboard, DollarSign, BarChart3, Brain, Settings, Menu, Sun, Moon, Briefcase } from 'lucide-react';
 
 import axios from 'axios';
-import CryptoCharts from './components/CryptoCharts';
-import BackendStatusDashboard from './components/BackendStatusDashboard';
 import TradingStrategyResults from './components/TradingStrategyResults';
 import PaperTradingDashboard from './components/PaperTradingDashboard';
+import MLInsights from './components/MLInsights';
+import BackendStatusDashboard from './components/BackendStatusDashboard';
+import CryptoCharts from './components/CryptoCharts';
+import AssetManagement from './components/AssetManagement';
 
 // Interface for coin data from CoinGecko API
 interface CoinGeckoData {
   id: string;
   symbol: string;
   name: string;
-  image: string;
   current_price: number;
-  market_cap: number;
-  market_cap_rank: number;
   price_change_percentage_24h: number;
-  price_change_24h: number;
-  total_volume: number;
+  market_cap_rank: number;
+  image: string;
 }
 
-
-// Interface for cryptocurrency data
+// Interface for our crypto data
 interface CryptoData {
   name: string;
   symbol: string;
@@ -54,89 +34,47 @@ interface CryptoData {
   price_change_24h_percentage: number;
 }
 
-// Initial crypto data with icons
+interface TradeAction {
+  action: string;
+  symbol: string;
+  price: number;
+  reason?: string;
+}
+
 const initialCryptoData: CryptoData[] = [
   {
-    name: "Bitcoin",
-    symbol: "BTC",
-    icon: <Bitcoin className="text-yellow-500" />,
-    amount: "1.245",
-    value: "$0.00",
-    profit: "0.0%",
-    prediction: "Loading...",
-    imageUrl: "https://cryptologos.cc/logos/bitcoin-btc-logo.png",
+    name: 'Bitcoin',
+    symbol: 'BTC',
+    icon: <img src="https://cryptologos.cc/logos/bitcoin-btc-logo.png" alt="BTC" className="w-5 h-5" />,
+    amount: '0',
+    value: '$0.00',
+    profit: '+0.0%',
+    prediction: 'Neutral',
+    imageUrl: 'https://cryptologos.cc/logos/bitcoin-btc-logo.png',
     price: 0,
     price_change_24h_percentage: 0
   },
   {
-    name: "Ethereum",
-    symbol: "ETH",
-    icon: <Ethereum className="text-blue-500" />,
-    amount: "12.54",
-    value: "$0.00",
-    profit: "0.0%",
-    prediction: "Loading...",
-    imageUrl: "https://cryptologos.cc/logos/ethereum-eth-logo.png",
+    name: 'Ethereum',
+    symbol: 'ETH',
+    icon: <img src="https://cryptologos.cc/logos/ethereum-eth-logo.png" alt="ETH" className="w-5 h-5" />,
+    amount: '0',
+    value: '$0.00',
+    profit: '+0.0%',
+    prediction: 'Neutral',
+    imageUrl: 'https://cryptologos.cc/logos/ethereum-eth-logo.png',
     price: 0,
     price_change_24h_percentage: 0
   },
   {
-    name: "Cardano",
-    symbol: "ADA",
-    icon: <Gem className="text-blue-400" />,
-    amount: "5,420",
-    value: "$0.00",
-    profit: "0.0%",
-    prediction: "Loading...",
-    imageUrl: "https://cryptologos.cc/logos/cardano-ada-logo.png",
-    price: 0,
-    price_change_24h_percentage: 0
-  },
-  {
-    name: "Solana",
-    symbol: "SOL",
-    icon: <Coins className="text-purple-500" />,
-    amount: "156.8",
-    value: "$0.00",
-    profit: "0.0%",
-    prediction: "Loading...",
-    imageUrl: "https://cryptologos.cc/logos/solana-sol-logo.png",
-    price: 0,
-    price_change_24h_percentage: 0
-  },
-  {
-    name: "Ripple",
-    symbol: "XRP",
-    icon: <Gem className="text-blue-500" />,
-    amount: "10,500",
-    value: "$0.00",
-    profit: "0.0%",
-    prediction: "Loading...",
-    imageUrl: "https://cryptologos.cc/logos/xrp-xrp-logo.png",
-    price: 0,
-    price_change_24h_percentage: 0
-  },
-  {
-    name: "Polkadot",
-    symbol: "DOT",
-    icon: <Coins className="text-pink-500" />,
-    amount: "520",
-    value: "$0.00",
-    profit: "0.0%",
-    prediction: "Loading...",
-    imageUrl: "https://cryptologos.cc/logos/polkadot-new-dot-logo.png",
-    price: 0,
-    price_change_24h_percentage: 0
-  },
-  {
-    name: "Avalanche",
-    symbol: "AVAX",
-    icon: <Coins className="text-red-500" />,
-    amount: "85",
-    value: "$0.00",
-    profit: "0.0%",
-    prediction: "Loading...",
-    imageUrl: "https://cryptologos.cc/logos/avalanche-avax-logo.png",
+    name: 'Gemini',
+    symbol: 'GEM',
+    icon: <img src="https://cryptologos.cc/logos/gemini-gem-logo.png" alt="GEM" className="w-5 h-5" />,
+    amount: '0',
+    value: '$0.00',
+    profit: '+0.0%',
+    prediction: 'Neutral',
+    imageUrl: 'https://cryptologos.cc/logos/gemini-gem-logo.png',
     price: 0,
     price_change_24h_percentage: 0
   }
@@ -151,801 +89,857 @@ function App() {
   const [isDarkMode, setIsDarkMode] = useState(true);
   const [activeTab, setActiveTab] = useState('dashboard');
   const [isSidebarOpen, setIsSidebarOpen] = useState(true);
-  const [isLoading, setIsLoading] = useState(false);
+  const [selectedPeriod, setSelectedPeriod] = useState('1h');
   const [isSpinning, setIsSpinning] = useState(false);
-  const [isAssetsExpanded, setIsAssetsExpanded] = useState(true);
-  const [isDragging, setIsDragging] = useState(false);
-  const [startY, setStartY] = useState(0);
-  const [offsetY, setOffsetY] = useState(0);
   const [currentIndex, setCurrentIndex] = useState(0);
-  const spinTimerRef = useRef<ReturnType<typeof setTimeout>>();
+  const [offsetY, setOffsetY] = useState(0);
+  const [isDragging, setIsDragging] = useState(false);
+  const [isAssetsExpanded, setIsAssetsExpanded] = useState(true);
+  const [autoExecuteEnabled, setAutoExecuteEnabled] = useState(false);
+  const [isLoading, setIsLoading] = useState(false);
+  const [chartData, setChartData] = useState<{
+    technicalAnalysis?: Record<string, unknown>;
+    price_html?: string;
+    signals_html?: string;
+    price_3d_html?: string;
+    signals_3d_html?: string;
+    lastUpdated?: string;
+  }>({});
   const slotRef = useRef<HTMLDivElement>(null);
 
-  // Bot thought helper function
-  const showBotThought = (message: string) => {
-    setBotThought({
-      isVisible: true,
-      message
-    });
-    
-    // Auto-hide after 5 seconds
-    setTimeout(() => {
-      setBotThought(prev => ({
-        ...prev,
-        isVisible: false
-      }));
-    }, 5000);
+  // Track last crypto switch time for rate limiting
+  const lastSwitchTimeRef = useRef(Date.now());
+  // Minimum time between crypto switches in milliseconds (5 seconds)
+  const RATE_LIMIT_MS = 5000;
+
+  // Cache for technical analysis data to avoid repeated API failures
+  const [technicalAnalysisCache, setTechnicalAnalysisCache] = useState<Record<string, TechnicalAnalysisData>>({});
+  
+  // Define type for technical analysis data
+  interface TechnicalAnalysisData {
+    technicalAnalysis: {
+      symbol: string;
+      timeframe: string;
+      last_updated: string;
+      indicators: {
+        rsi: { value: number; signal: string };
+        macd: { value: number; signal: string };
+        ema: { value: number; signal: string };
+        bbands: { upper: number; middle: number; lower: number; signal: string };
+        volume: { value: number; signal: string };
+      };
+      price: {
+        current: number;
+        high_24h: number;
+        low_24h: number;
+        change_24h_percent: number;
+      };
+      prediction: string;
+    };
+    price_html: string;
+    signals_html: string;
+    lastUpdated: string;
+  }
+  
+  // Function to fetch fresh technical analysis data for a symbol
+  const fetchTechnicalAnalysisData = async (symbol: string, timeframe: string = '1h') => {
+    try {
+      // Show loading state
+      setIsLoading(true);
+      showBotThought(`Fetching technical analysis data for ${symbol}...`);
+      
+      // Create a cache key
+      const cacheKey = `${symbol}-${timeframe}`;
+      
+      // Check if we have cached data for this symbol/timeframe
+      if (technicalAnalysisCache[cacheKey]) {
+        console.log(`Using cached data for ${cacheKey}`);
+        
+        // Use cached data
+        setChartData(prevData => ({
+          ...prevData,
+          technicalAnalysis: technicalAnalysisCache[cacheKey].technicalAnalysis || prevData.technicalAnalysis,
+          price_html: technicalAnalysisCache[cacheKey].price_html || prevData.price_html,
+          signals_html: technicalAnalysisCache[cacheKey].signals_html || prevData.signals_html,
+          lastUpdated: technicalAnalysisCache[cacheKey].lastUpdated || new Date().toISOString()
+        }));
+        
+        // Update chart title
+        updateChartTitle(symbol, timeframe);
+        showBotThought(`${symbol} technical analysis loaded from cache`);
+        setIsLoading(false);
+        return;
+      }
+      
+      // Construct API endpoint URL - the backend expects symbol without the USDT suffix for many endpoints
+      const cleanSymbol = symbol.replace('USDT', '');
+      const apiUrl = `/api/technical-analysis?symbol=${cleanSymbol}&timeframe=${timeframe}`;
+      
+      // Use a timeout to prevent hanging requests
+      const controller = new AbortController();
+      const timeoutId = setTimeout(() => controller.abort(), 5000); // 5 second timeout
+      
+      try {
+        // Fetch fresh data with timeout
+        const response = await fetch(apiUrl, {
+          signal: controller.signal
+        });
+        
+        clearTimeout(timeoutId); // Clear timeout if fetch completes
+        
+        if (!response.ok) {
+          throw new Error(`API request failed with status ${response.status}`);
+        }
+        
+        // Parse the response text first to handle invalid JSON safely
+        const responseText = await response.text();
+        let freshData;
+        
+        try {
+          freshData = JSON.parse(responseText);
+        } catch (parseError) {
+          console.error('Failed to parse JSON response:', parseError);
+          throw new Error('Invalid JSON response from server');
+        }
+        
+        // Create cached data entry
+        const cachedData = {
+          technicalAnalysis: freshData.technicalAnalysis || generateFallbackData(symbol),
+          price_html: freshData.price_html || '',
+          signals_html: freshData.signals_html || '',
+          lastUpdated: new Date().toISOString()
+        };
+        
+        // Cache the data
+        setTechnicalAnalysisCache(prev => ({
+          ...prev,
+          [cacheKey]: cachedData
+        }));
+        
+        // Update chart data
+        setChartData(prevData => ({
+          ...prevData,
+          ...cachedData
+        }));
+        
+        // Update chart title
+        updateChartTitle(symbol, timeframe);
+        showBotThought(`${symbol} technical analysis updated with latest data`);
+      } catch (fetchError) {
+        console.error('Fetch error:', fetchError);
+        // Use fallback data
+        const fallbackData = {
+          technicalAnalysis: generateFallbackData(symbol),
+          price_html: '',
+          signals_html: '',
+          lastUpdated: new Date().toISOString()
+        };
+        
+        // Cache the fallback data
+        setTechnicalAnalysisCache(prev => ({
+          ...prev,
+          [cacheKey]: fallbackData
+        }));
+        
+        // Update chart data with fallback
+        setChartData(prevData => ({
+          ...prevData,
+          ...fallbackData
+        }));
+        
+        updateChartTitle(symbol, timeframe);
+        showBotThought(`Using simulation data for ${symbol} due to connection issues`);
+      }
+    } catch (error) {
+      console.error('Error in technical analysis flow:', error);
+      
+      // Ensure we're not stuck in loading state
+      setIsLoading(false);
+    }
+  };
+  
+  // Helper function to update chart title
+  const updateChartTitle = (symbol: string, timeframe: string) => {
+    const chartTitle = document.querySelector('.crypto-charts-wrapper .text-gray-900.dark\\:text-gray-100');
+    if (chartTitle) {
+      chartTitle.textContent = `${symbol} Technical Analysis ${timeframe}`;
+    }
+  };
+  
+  // Generate fallback data when API fails
+  const generateFallbackData = (symbol: string) => {
+    // Basic template for technical indicators
+    return {
+      symbol: symbol,
+      timeframe: '1h',
+      last_updated: new Date().toISOString(),
+      indicators: {
+        rsi: { value: 55, signal: 'neutral' },
+        macd: { value: 0.2, signal: 'neutral' },
+        ema: { value: 50, signal: 'neutral' },
+        bbands: { upper: 55, middle: 50, lower: 45, signal: 'neutral' },
+        volume: { value: 10000000, signal: 'neutral' }
+      },
+      price: {
+        current: 50000,
+        high_24h: 52000,
+        low_24h: 49000,
+        change_24h_percent: 1.5
+      },
+      prediction: "neutral"
+    };
   };
 
-  // Set dark mode as default
-  useEffect(() => {
-    document.documentElement.classList.add('dark');
-  }, []);
-
-  // Handle dark mode changes
-  useEffect(() => {
-    if (isDarkMode) {
-      document.documentElement.classList.add('dark');
-    } else {
-      document.documentElement.classList.remove('dark');
+  // Function to switch to a specific crypto's technical analysis with rate limiting
+  const switchToTechnicalAnalysis = (symbol: string) => {
+    // Find the crypto in our data
+    const cryptoIndex = cryptoData.findIndex(crypto => crypto.symbol === symbol);
+    if (cryptoIndex === -1) return;
+    
+    const now = Date.now();
+    const timeSinceLastSwitch = now - lastSwitchTimeRef.current;
+    
+    // Update the current index to show the selected crypto
+    setCurrentIndex(cryptoIndex);
+    
+    // Switch to dashboard if not already there
+    if (activeTab !== 'dashboard') {
+      setActiveTab('dashboard');
     }
-  }, [isDarkMode]);
+    
+    // Check rate limiting
+    if (timeSinceLastSwitch < RATE_LIMIT_MS) {
+      showBotThought(`Selected ${symbol}. Technical analysis will update in ${Math.ceil((RATE_LIMIT_MS - timeSinceLastSwitch) / 1000)} seconds due to rate limiting...`);
+      return;
+    }
+    
+    // Update timestamp for rate limiting
+    lastSwitchTimeRef.current = now;
+    
+    // Fetch fresh data for the selected crypto
+    fetchTechnicalAnalysisData(symbol);
+  };
 
-
-
-  const [selectedPeriod, setSelectedPeriod] = useState('1h');
-  const [autoExecuteEnabled, setAutoExecuteEnabled] = useState(false);
-  
-
-  
   // Function to update the trading configuration file
-  const updateTradingConfig = useCallback(async (period: string) => {
+  const updateTradingConfig = async (period: string) => {
     try {
-      // Create a POST request to update the config
       const response = await fetch('/api/update-trading-config', {
         method: 'POST',
         headers: {
           'Content-Type': 'application/json',
         },
-        body: JSON.stringify({ update_interval: period }),
+        body: JSON.stringify({ period }),
       });
-      
+
       if (!response.ok) {
-        console.warn('Could not update trading config:', response.statusText);
+        throw new Error('Failed to update trading config');
       }
+
+      const result = await response.json();
+      console.log('Trading config updated:', result);
     } catch (error) {
       console.error('Error updating trading config:', error);
-      // The backend script will still read the config file periodically
     }
-  }, []);
+  };
 
   // Fetch real cryptocurrency data
   useEffect(() => {
     const fetchCryptoData = async () => {
       try {
-        setIsLoading(true);
-        // Using CoinGecko API to fetch real crypto data
         const response = await axios.get('https://api.coingecko.com/api/v3/coins/markets', {
           params: {
             vs_currency: 'usd',
-            ids: 'bitcoin,ethereum,cardano,solana,ripple,polkadot,avalanche',
             order: 'market_cap_desc',
             per_page: 10,
             page: 1,
             sparkline: false,
-            price_change_percentage: '24h'
-          }
+          },
         });
-        
-        // Map API data to our CryptoData format
-        const mappedData = response.data.map((coin: CoinGeckoData) => {
-          // Find corresponding entry in our initialData to keep icons and amounts
-          const existingCoin = initialCryptoData.find(c => c.symbol.toLowerCase() === coin.symbol.toLowerCase());
-          
-          // Set prediction based on price change
-          let prediction = "Neutral";
-          if (coin.price_change_percentage_24h > 5) prediction = "Highly Bullish";
-          else if (coin.price_change_percentage_24h > 1) prediction = "Bullish";
-          else if (coin.price_change_percentage_24h < -5) prediction = "Highly Bearish";
-          else if (coin.price_change_percentage_24h < -1) prediction = "Bearish";
-          
-          return {
-            name: coin.name,
-            symbol: coin.symbol.toUpperCase(),
-            icon: existingCoin?.icon || <Coins className="text-gray-500" />,
-            amount: existingCoin?.amount || "0",
-            value: `$${coin.current_price.toLocaleString()}`,
-            profit: `${coin.price_change_percentage_24h >= 0 ? '+' : ''}${coin.price_change_percentage_24h.toFixed(2)}%`,
-            prediction: prediction,
-            imageUrl: coin.image,
-            price: coin.current_price,
-            price_change_24h_percentage: coin.price_change_percentage_24h
-          };
-        });
-        
-        setCryptoData(mappedData);
-        setIsLoading(false);
+
+        const formattedData = response.data.map((coin: CoinGeckoData) => ({
+          name: coin.name,
+          symbol: coin.symbol.toUpperCase(),
+          icon: <img src={coin.image} alt={coin.symbol} className="w-5 h-5" />,
+          amount: '0',
+          value: `$0.00`,
+          profit: '+0.0%',
+          prediction: 'Neutral',
+          imageUrl: coin.image,
+          price: coin.current_price,
+          price_change_24h_percentage: coin.price_change_percentage_24h,
+        }));
+
+        setCryptoData(formattedData);
       } catch (error) {
         console.error('Error fetching crypto data:', error);
-        // If API fails, fallback to our static data but with a notice
-        const fallbackData = initialCryptoData.map(coin => ({
-          ...coin,
-          prediction: "API Error - Using Fallback Data"
-        }));
-        setCryptoData(fallbackData);
-        setIsLoading(false);
       }
     };
-    
+
     fetchCryptoData();
-    
-    // Refresh data every 5 minutes
-    const intervalId = setInterval(fetchCryptoData, 5 * 60 * 1000);
-    
-    return () => clearInterval(intervalId);
   }, []);
 
-  useEffect(() => {
-    if (isDarkMode) {
-      document.documentElement.classList.add('dark');
-    } else {
-      document.documentElement.classList.remove('dark');
-    }
-  }, [isDarkMode]);
+  const showBotThought = (message: string) => {
+    setBotThought({
+      isVisible: true,
+      message,
+    });
+    setTimeout(() => {
+      setBotThought(prev => ({
+        ...prev,
+        isVisible: false,
+      }));
+    }, 5000);
+  };
+
+  const handleMouseDown = () => {
+    setIsDragging(true);
+    document.addEventListener('mousemove', handleMouseMove);
+    document.addEventListener('mouseup', handleMouseUp);
+  };
+
+  const handleMouseMove = (e: MouseEvent) => {
+    if (!isDragging) return;
+    setOffsetY(e.clientY);
+  };
+
+  const handleMouseUp = () => {
+    setIsDragging(false);
+    document.removeEventListener('mousemove', handleMouseMove);
+    document.removeEventListener('mouseup', handleMouseUp);
+  };
+
+  const handleWheel = (e: React.WheelEvent) => {
+    if (isSpinning) return;
+    setOffsetY(prev => prev + e.deltaY);
+  };
 
   const spinSlot = () => {
-    // Clear any existing spin timer
-    if (spinTimerRef.current) {
-      clearTimeout(spinTimerRef.current);
-    }
+    // Store the initial index before spinning
+    const initialIndex = currentIndex;
     
+    // Start spinning
     setIsSpinning(true);
-    const spins = Math.random() * 10 + 15; // More spins before stopping
-    let count = 0;
     
-    const spin = () => {
-      setCurrentIndex(prev => (prev + 1) % cryptoData.length);
-      count++;
+    // Create a more chaotic spinning effect (sometimes going forward, sometimes backward)
+    const interval = setInterval(() => {
+      setCurrentIndex(prev => {
+        // Randomly decide whether to move forward or backward
+        const direction = Math.random() > 0.3 ? 1 : -1;
+        // Calculate new index with wrapping
+        const newIndex = (prev + direction + cryptoData.length) % cryptoData.length;
+        return newIndex;
+      });
+    }, 100);
+
+    // After 3 seconds, stop at a random position
+    setTimeout(() => {
+      clearInterval(interval);
       
-      if (count < spins) {
-        // Much slower spinning (300ms base + slower acceleration)
-        spinTimerRef.current = setTimeout(spin, 300 + (count * 25)); 
-      } else {
-        setIsSpinning(false);
-        spinTimerRef.current = undefined;
-      }
-    };
-    
-    spin();
-  };
-  
-  // Function to stop spinning immediately
-  const stopSpinning = () => {
-    if (isSpinning && spinTimerRef.current) {
-      clearTimeout(spinTimerRef.current);
-      spinTimerRef.current = undefined;
+      // Select a random cryptocurrency as the final result
+      // Make sure it's different from the starting position for better UX
+      let randomIndex;
+      do {
+        randomIndex = Math.floor(Math.random() * cryptoData.length);
+      } while(randomIndex === initialIndex && cryptoData.length > 1);
+      
+      setCurrentIndex(randomIndex);
       setIsSpinning(false);
+    }, 3000);
+  };
+
+  const stopSpinning = () => {
+    // When manually stopping, also pick a random cryptocurrency
+    const randomIndex = Math.floor(Math.random() * cryptoData.length);
+    setCurrentIndex(randomIndex);
+    setIsSpinning(false);
+  };
+
+  const handleExecuteTrade = async (trade: TradeAction): Promise<boolean> => {
+    try {
+      // Execute the trade through paper trading service
+      const tradeResult = await fetch('/trading/paper', {
+        method: 'POST',
+        headers: {
+          'Content-Type': 'application/json',
+        },
+        body: JSON.stringify({
+          command: 'trade',
+          side: trade.action.toUpperCase(),
+          symbol: trade.symbol,
+          price: trade.price,
+          confidence: 1.0, // High confidence for manual trades
+          note: `Manual trade: ${trade.reason || trade.action} ${trade.symbol} at ${trade.price}`
+        }),
+      });
+
+      const resultData = await tradeResult.json();
+
+      if (!tradeResult.ok || resultData.status !== 'success') {
+        throw new Error(resultData.message || 'Trade execution failed');
+      }
+
+      // Dispatch a custom event to notify the PaperTradingDashboard to refresh
+      const event = new CustomEvent('paper-trading-update');
+      window.dispatchEvent(event);
+
+      showBotThought(`Executed trade: ${trade.action} ${trade.symbol} at ${trade.price}`);
+      return true;
+    } catch (error) {
+      console.error('Error executing trade:', error);
+      showBotThought(`Failed to execute trade: ${error}`);
+      return false;
     }
   };
 
-  const handleMouseDown = (e: React.MouseEvent<HTMLDivElement>) => {
-    if (isSpinning) return;
-    setIsDragging(true);
-    setStartY(e.clientY);
-    document.addEventListener('mousemove', handleMouseMoveDoc);
-    document.addEventListener('mouseup', handleMouseUpDoc);
-  };
+  useEffect(() => {
+    document.documentElement.classList.toggle('dark', isDarkMode);
+  }, [isDarkMode]);
 
-  const handleMouseMoveDoc = (e: Event) => {
-    // Cast to DOM MouseEvent, not React's MouseEvent
-    const mouseEvent = e as globalThis.MouseEvent;
-    if (!isDragging) return;
-    const deltaY = mouseEvent.clientY - startY;
-    setOffsetY(deltaY);
-
-    // Calculate index based on drag distance
-    const slotHeight = 120; // Height of one slot item
-    const newIndex = Math.floor(Math.abs(deltaY) / slotHeight) % cryptoData.length;
-    
-    if (deltaY > 0) {
-      setCurrentIndex((currentIndex - newIndex + cryptoData.length) % cryptoData.length);
-    } else {
-      setCurrentIndex((currentIndex + newIndex) % cryptoData.length);
-    }
-  };
-  
-  // Handler removed as it's not used
-
-  const handleMouseUpDoc = () => {
-    setIsDragging(false);
-    setOffsetY(0);
-    document.removeEventListener('mousemove', handleMouseMoveDoc);
-    document.removeEventListener('mouseup', handleMouseUpDoc);
-  };
-
-  // Handle mouse wheel scrolling for the crypto roller
-  const handleWheel = (e: React.WheelEvent<HTMLDivElement>) => {
-    if (isSpinning) return; // Don't allow wheel scrolling while spinning
-    
-    e.preventDefault(); // Prevent the page from scrolling
-    
-    // Determine scroll direction (positive deltaY = scroll down, negative = scroll up)
-    if (e.deltaY > 0) {
-      // Scroll down - move to next crypto
-      setCurrentIndex((prev) => (prev + 1) % cryptoData.length);
-    } else {
-      // Scroll up - move to previous crypto
-      setCurrentIndex((prev) => (prev - 1 + cryptoData.length) % cryptoData.length);
-    }
-  };
-
-  // Handler removed as it's not used
-
-  // Define SidebarLink component inside App function to prevent error
-  const SidebarLink = ({ icon, text, active = false, collapsed = false, onClick }: {
-    icon: React.ReactNode;
-    text: string;
-    active?: boolean;
-    collapsed?: boolean;
-    onClick?: () => void;
-  }) => {
-    return (
-      <div 
-        onClick={onClick}
-        className={`
-          flex items-center gap-4 p-3 rounded-lg mb-2 transition-all duration-300
-          ${active 
-            ? 'bg-indigo-600 text-white shadow-lg shadow-indigo-600/20' 
-            : 'text-gray-600 dark:text-gray-300 hover:bg-gray-100 dark:hover:bg-gray-700'
-          }
-        `}
-      >
-        {icon}
-        {!collapsed && <span className="font-medium">{text}</span>}
-      </div>
-    );
-  };
-
-  // Define StatCard component
-  const StatCard = ({ title, value, change, positive, icon }: {
-    title: string;
-    value: string;
-    change: string;
-    positive: boolean;
-    icon: React.ReactNode;
-  }) => {
-    return (
-      <div className="theme-card rounded-xl p-6 relative overflow-hidden group">
-        <div className="absolute top-0 right-0 p-4 opacity-20 transform transition-transform group-hover:scale-110">
-          {icon}
-        </div>
-        <h3 className="text-gray-600 dark:text-gray-400 mb-2">{title}</h3>
-        <div className="text-2xl font-bold mb-2 text-gray-900 dark:text-white">
-          {value}
-        </div>
-        <div className={`text-sm ${positive ? 'text-green-500' : 'text-red-500'}`}>
-          {change}
-        </div>
-      </div>
-    );
-  };
-  
-  // Define AssetRow component
-  const AssetRow = ({
-    icon, name, symbol, price, holdings, value, change, positive, onBuy, onSell, onTransfer, onRemove
-  }: {
-    icon: React.ReactNode;
-    name: string;
-    symbol: string;
-    price: string;
-    holdings: string;
-    value: string;
-    change: string;
-    positive: boolean;
-    onBuy: () => void;
-    onSell: () => void;
-    onTransfer: () => void;
-    onRemove: () => void;
-  }) => {
-    return (
-      <tr className="transition-colors hover:bg-gray-50 dark:hover:bg-gray-700">
-        <td className="p-4">
-          <div className="flex items-center gap-3">
-            <div className="p-2 rounded-lg bg-gray-100 dark:bg-gray-700">
-              {icon}
-            </div>
-            <div>
-              <div className="font-medium text-gray-900 dark:text-white">{name}</div>
-              <div className="text-gray-500 dark:text-gray-400 text-sm">{symbol}</div>
-            </div>
-          </div>
-        </td>
-        <td className="p-4">{price}</td>
-        <td className="p-4">{holdings}</td>
-        <td className="p-4">{value}</td>
-        <td className={`p-4 ${positive ? 'text-green-500' : 'text-red-500'}`}>
-          {change}
-        </td>
-        <td className="p-4">
-          <div className="flex gap-2">
-            <button 
-              onClick={onBuy}
-              className="px-3 py-1 text-sm rounded bg-green-500 text-white hover:bg-green-600"
-              title="Buy"
-            >
-              Buy
-            </button>
-            <button 
-              onClick={onSell}
-              className="px-3 py-1 text-sm rounded bg-red-500 text-white hover:bg-red-600"
-              title="Sell"
-            >
-              Sell
-            </button>
-            <button 
-              onClick={onTransfer}
-              className="p-1 rounded bg-blue-500 text-white hover:bg-blue-600 flex items-center justify-center"
-              title="Transfer"
-            >
-              <ArrowRight size={16} />
-            </button>
-            <button 
-              onClick={onRemove}
-              className="p-1 rounded bg-gray-200 dark:bg-gray-600 text-gray-700 dark:text-gray-200 hover:bg-gray-300 dark:hover:bg-gray-500 flex items-center justify-center"
-              title="Remove Asset"
-            >
-              <Trash2 size={16} />
-            </button>
-          </div>
-        </td>
-      </tr>
-    );
-  };
-
-  // Define BotThought component
-  const BotThought = ({ isVisible, message, onClose }: {
-    isVisible: boolean;
-    message: string;
-    onClose: () => void;
-  }) => {
-    if (!isVisible) return null;
-
-    return (
-      <div className="fixed bottom-4 right-4 max-w-md w-full animate-slide-up z-50">
-        <div className="theme-card rounded-xl p-4 shadow-lg border border-gray-200 dark:border-gray-700">
-          <div className="flex items-start gap-3">
-            {/* Bot Avatar */}
-            <div className="w-10 h-10 rounded-full overflow-hidden flex-shrink-0 bg-gray-100 dark:bg-gray-700 flex items-center justify-center">
-              <img 
-                src="/dimbot-avatar.png" 
-                alt="Dimbot"
-                className="w-full h-full object-cover"
-              />
-            </div>
-            
-            {/* Content */}
-            <div className="flex-1">
-              <div className="flex items-center justify-between mb-2">
-                <h3 className="font-semibold text-gray-900 dark:text-white">
-                  Dimbot:
-                </h3>
-                <button 
-                  onClick={onClose}
-                  className="p-1 rounded-lg hover:bg-gray-100 dark:hover:bg-gray-700 text-gray-500 dark:text-gray-400"
-                >
-                  <X size={16} />
-                </button>
-              </div>
-              <p className="text-gray-700 dark:text-gray-300 text-sm">
-                {message}
-              </p>
-            </div>
-          </div>
-        </div>
-      </div>
-    );
-  };
-  
   return (
-    <div className="min-h-screen bg-gray-100 dark:bg-gray-900 text-gray-900 dark:text-gray-100 flex font-cinzel transition-colors duration-300">
+    <div className={`min-h-screen bg-gray-50 dark:bg-gray-900 ${isDarkMode ? 'dark' : ''}`}>
       {/* Sidebar */}
-      <div 
-        className={`
-          ${isSidebarOpen ? 'w-64' : 'w-20'} 
-          theme-card
-          p-4 transition-all duration-300 ease-in-out
-          relative
-        `}
+      <aside
+        className={`fixed inset-y-0 left-0 w-48 md:w-52 lg:w-56 bg-white dark:bg-gray-800 shadow-lg transition-transform duration-300 ${
+          isSidebarOpen ? 'translate-x-0' : '-translate-x-full md:translate-x-0'
+        }`}
       >
-        <div className="flex items-center justify-between mb-4">
-          <h1 className={`${!isSidebarOpen && 'hidden'} text-xl font-bold text-gray-900 dark:text-white`}>
-            CryptoTracker
-          </h1>
-          <button 
-            onClick={() => setIsSidebarOpen(!isSidebarOpen)} 
-            className="p-2 hover:bg-gray-100 dark:hover:bg-gray-700 rounded-lg transition-colors"
-          >
-            {isSidebarOpen ? <X size={20} /> : <Menu size={20} />}
-          </button>
+        <div className="p-4 border-b dark:border-gray-700">
+          <h1 className="text-xl font-bold text-gray-900 dark:text-white">Dimbot</h1>
         </div>
-        
-        {/* Theme Switcher - Moved to top */}
-        <div className="theme-switcher mb-6">
+        <nav className="p-4 space-y-1">
           <button
             onClick={() => setIsDarkMode(!isDarkMode)}
-            className="w-full flex items-center justify-center gap-2 p-2 rounded-lg
-                     bg-gray-100 dark:bg-gray-700 hover:bg-gray-200 dark:hover:bg-gray-600
-                     transition-colors duration-200"
+            className="flex w-full items-center justify-between px-4 py-3 text-gray-700 dark:text-gray-300 hover:bg-gray-100 dark:hover:bg-gray-700 rounded-lg transition-colors"
           >
-            {isDarkMode ? <Sun size={16} /> : <Moon size={16} />}
-            {isSidebarOpen && <span>{isDarkMode ? 'Light Mode' : 'Dark Mode'}</span>}
+            <div className="flex items-center space-x-3">
+              {isDarkMode ? <Sun className="h-5 w-5" /> : <Moon className="h-5 w-5" />}
+              <span>{isDarkMode ? 'Light Mode' : 'Dark Mode'}</span>
+            </div>
+            <div className={`w-10 h-5 rounded-full ${isDarkMode ? 'bg-blue-500' : 'bg-gray-300'} relative transition-colors duration-300`}>
+              <div className={`absolute top-0.5 left-0.5 bg-white rounded-full w-4 h-4 transform transition-transform duration-300 ${isDarkMode ? 'translate-x-5' : ''}`}></div>
+            </div>
           </button>
-        </div>
-        
-        <nav>
-          <SidebarLink 
-            icon={<LayoutDashboard />} 
-            text="Dashboard" 
-            active={activeTab === 'dashboard'} 
-            collapsed={!isSidebarOpen} 
+          <div className="my-3 border-t border-gray-200 dark:border-gray-700"></div>
+          <button
             onClick={() => setActiveTab('dashboard')}
-          />
-          <SidebarLink 
-            icon={<DollarSign />} 
-            text="Paper Trading" 
-            active={activeTab === 'paperTrading'} 
-            collapsed={!isSidebarOpen}
-            onClick={() => setActiveTab('paperTrading')}
-          />
-          <SidebarLink 
-            icon={<Wallet />} 
-            text="Portfolio" 
-            active={activeTab === 'portfolio'} 
-            collapsed={!isSidebarOpen}
-            onClick={() => setActiveTab('portfolio')}
-          />
-          <SidebarLink 
-            icon={<LineChart />} 
-            text="Analytics" 
-            active={activeTab === 'analytics'} 
-            collapsed={!isSidebarOpen}
-            onClick={() => setActiveTab('analytics')}
-          />
-          <SidebarLink 
-            icon={<History />} 
-            text="History" 
-            active={activeTab === 'history'} 
-            collapsed={!isSidebarOpen}
-            onClick={() => setActiveTab('history')}
-          />
-          <SidebarLink 
-            icon={<Settings />} 
-            text="Settings" 
-            active={activeTab === 'settings'} 
-            collapsed={!isSidebarOpen}
+            className={`flex items-center space-x-3 px-4 py-3 text-gray-700 dark:text-gray-300 hover:bg-gray-100 dark:hover:bg-gray-700 rounded-lg transition-colors ${
+              activeTab === 'dashboard' ? 'bg-blue-500 text-white' : ''
+            }`}
+          >
+            <LayoutDashboard className="h-5 w-5" />
+            <span>Dashboard</span>
+          </button>
+          <button
+            onClick={() => setActiveTab('assets')}
+            className={`flex items-center space-x-3 px-4 py-3 text-gray-700 dark:text-gray-300 hover:bg-gray-100 dark:hover:bg-gray-700 rounded-lg transition-colors ${
+              activeTab === 'assets' ? 'bg-blue-500 text-white' : ''
+            }`}
+          >
+            <Briefcase className="h-5 w-5" />
+            <span>My Assets</span>
+          </button>
+          <button
+            onClick={() => setActiveTab('trading')}
+            className={`flex items-center space-x-3 px-4 py-3 text-gray-700 dark:text-gray-300 hover:bg-gray-100 dark:hover:bg-gray-700 rounded-lg transition-colors ${
+              activeTab === 'trading' ? 'bg-blue-500 text-white' : ''
+            }`}
+          >
+            <BarChart3 className="h-5 w-5" />
+            <span>Trading Strategy</span>
+          </button>
+          <button
+            onClick={() => setActiveTab('paper')}
+            className={`flex items-center space-x-3 px-4 py-3 text-gray-700 dark:text-gray-300 hover:bg-gray-100 dark:hover:bg-gray-700 rounded-lg transition-colors ${
+              activeTab === 'paper' ? 'bg-blue-500 text-white' : ''
+            }`}
+          >
+            <DollarSign className="h-5 w-5" />
+            <span>Paper Trading</span>
+          </button>
+          <button
+            onClick={() => setActiveTab('ml-insights')}
+            className={`flex items-center space-x-3 px-4 py-3 text-gray-700 dark:text-gray-300 hover:bg-gray-100 dark:hover:bg-gray-700 rounded-lg transition-colors ${
+              activeTab === 'ml-insights' ? 'bg-blue-500 text-white' : ''
+            }`}
+          >
+            <Brain className="h-5 w-5" />
+            <span>Internals</span>
+          </button>
+          <button
             onClick={() => setActiveTab('settings')}
-          />
+            className={`flex items-center space-x-3 px-4 py-3 text-gray-700 dark:text-gray-300 hover:bg-gray-100 dark:hover:bg-gray-700 rounded-lg transition-colors ${
+              activeTab === 'settings' ? 'bg-blue-500 text-white' : ''
+            }`}
+          >
+            <Settings className="h-5 w-5" />
+            <span>Settings</span>
+          </button>
         </nav>
-
-        {/* Theme switcher moved to top */}
-      </div>
+      </aside>
 
       {/* Main Content */}
-      <div className="flex-1 p-8">
-        {activeTab === 'paperTrading' ? (
+      <main className="ml-48 md:ml-52 lg:ml-56 p-6">
+        <div className="flex justify-between items-center mb-6">
+          <h1 className="text-2xl font-bold text-gray-900 dark:text-white">
+            {activeTab === 'dashboard' && 'Dashboard'}
+            {activeTab === 'assets' && 'My Assets'}
+            {activeTab === 'trading' && 'Trading Strategy'}
+            {activeTab === 'paper' && 'Paper Trading'}
+            {activeTab === 'ml-insights' && 'Internals'}
+            {activeTab === 'settings' && 'Settings'}
+          </h1>
+          <div className="flex items-center space-x-4">
+            <button
+              onClick={() => setIsDarkMode(!isDarkMode)}
+              className="p-2 rounded-lg hover:bg-gray-100 dark:hover:bg-gray-700 transition-colors"
+            >
+              {isDarkMode ? <Sun className="h-5 w-5" /> : <Moon className="h-5 w-5" />}
+            </button>
+            <button
+              onClick={() => setIsSidebarOpen(!isSidebarOpen)}
+              className="p-2 rounded-lg hover:bg-gray-100 dark:hover:bg-gray-700 transition-colors"
+            >
+              <Menu className="h-5 w-5" />
+            </button>
+          </div>
+        </div>
+
+        {/* Content based on active tab */}
+        {activeTab === 'assets' && (
+          <AssetManagement 
+            portfolioAssets={cryptoData}
+            onAddAsset={(asset) => {
+              // Handle adding new asset to the portfolio
+              setCryptoData(prevData => {
+                // Check if the asset already exists in the portfolio
+                const existingIndex = prevData.findIndex(crypto => crypto.symbol === asset.symbol);
+                if (existingIndex > -1) {
+                  // Update existing asset
+                  const newData = [...prevData];
+                  newData[existingIndex] = asset;
+                  return newData;
+                } else {
+                  // Add new asset
+                  return [...prevData, asset];
+                }
+              });
+              
+              // Log addition to console for tracking
+              console.log('Portfolio updated:', asset.symbol, 'added/updated');
+              console.log('Current portfolio:', cryptoData.length + (cryptoData.findIndex(c => c.symbol === asset.symbol) === -1 ? 1 : 0), 'assets');
+            }}
+            isDarkMode={isDarkMode}
+            onDarkModeChange={setIsDarkMode}
+            onSelectCrypto={switchToTechnicalAnalysis}
+          />
+        )}
+        {activeTab === 'dashboard' && (
+          <div className="space-y-6">
+            {/* Crypto Roller */}
+            <div className="grid grid-cols-1 md:grid-cols-3 gap-6">
+              <div className="slot-machine-container">
+                <div className="flex justify-between items-center mb-4">
+                  <h3 className="text-xl font-bold text-gray-900 dark:text-white">Crypto Roller</h3>
+                  <div className="space-x-2">
+                    {isSpinning && (
+                      <button 
+                        onClick={stopSpinning}
+                        className="theme-button-secondary px-4 py-2 rounded-lg"
+                      >
+                        Stop
+                      </button>
+                    )}
+                    <button 
+                      onClick={spinSlot}
+                      disabled={isDragging}
+                      className="theme-button px-4 py-2 rounded-lg"
+                    >
+                      {isSpinning ? 'Spinning...' : 'Auto Spin'}
+                    </button>
+                  </div>
+                </div>
+                <div 
+                  ref={slotRef}
+                  className={`slot-window bg-gray-800 dark:bg-gray-700 rounded-lg p-4 mb-4 cursor-ns-resize
+                            ${isDragging ? 'dragging' : ''}`}
+                  onMouseDown={handleMouseDown}
+                  onWheel={handleWheel}
+                  onClick={isSpinning ? stopSpinning : undefined}
+                >
+                  <div 
+                    className={`slot-item ${isSpinning ? 'spinning' : ''}`}
+                    style={{
+                      transform: isDragging ? `translateY(${offsetY}px)` : 'none'
+                    }}
+                  >
+                    <div className="flex items-center gap-4 p-4 bg-gray-700 dark:bg-gray-600 rounded-lg">
+                      <img 
+                        src={cryptoData[currentIndex].imageUrl} 
+                        alt={cryptoData[currentIndex].name}
+                        className="w-12 h-12 object-contain"
+                        draggable="false"
+                      />
+                      <div>
+                        <div className="text-xl font-bold text-white">
+                          {cryptoData[currentIndex].name}
+                        </div>
+                        <div className="text-gray-400">
+                          {cryptoData[currentIndex].symbol}
+                        </div>
+                      </div>
+                    </div>
+                  </div>
+                </div>
+                <div className="crypto-details bg-gray-50 dark:bg-gray-800 rounded-lg p-4">
+                  <div className="grid grid-cols-2 gap-4">
+                    <div>
+                      <div className="text-sm text-gray-500 dark:text-gray-400">Amount</div>
+                      <div className="text-lg font-bold text-gray-900 dark:text-white">
+                        {cryptoData[currentIndex].amount} {cryptoData[currentIndex].symbol}
+                      </div>
+                    </div>
+                    <div>
+                      <div className="text-sm text-gray-500 dark:text-gray-400">Current Price</div>
+                      <div className="text-lg font-bold text-gray-900 dark:text-white">
+                        {cryptoData[currentIndex].value}
+                      </div>
+                    </div>
+                    <div>
+                      <div className="text-sm text-gray-500 dark:text-gray-400">24h Change</div>
+                      <div className={`text-lg font-bold ${
+                        cryptoData[currentIndex].profit.startsWith('+') 
+                          ? 'text-green-500' 
+                          : 'text-red-500'
+                      }`}>
+                        {cryptoData[currentIndex].profit}
+                      </div>
+                    </div>
+                    <div>
+                      <div className="text-sm text-gray-500 dark:text-gray-400">Market Sentiment</div>
+                      <div className={`text-lg font-bold ${
+                        cryptoData[currentIndex].prediction.includes('Bull') 
+                          ? 'text-green-600 dark:text-green-400' 
+                          : cryptoData[currentIndex].prediction.includes('Bear')
+                            ? 'text-red-600 dark:text-red-400'
+                            : 'text-indigo-600 dark:text-indigo-400'
+                      }`}>
+                        {cryptoData[currentIndex].prediction}
+                      </div>
+                    </div>
+                    <div className="col-span-2 pt-2 mt-2 border-t border-gray-200 dark:border-gray-700">
+                      <div className="text-sm text-gray-500 dark:text-gray-400">Portfolio Value</div>
+                      <div className="text-lg font-bold text-gray-900 dark:text-white">
+                        ${((parseFloat(cryptoData[currentIndex].amount.replace(/,/g, '')) * 
+                           cryptoData[currentIndex].price) || 0).toLocaleString(undefined, {maximumFractionDigits: 2})}
+                      </div>
+                    </div>
+                  </div>
+                </div>
+              </div>
+            </div>
+
+            {/* Stats Cards */}
+            <div className="grid grid-cols-1 md:grid-cols-3 gap-6">
+              <div className="theme-card rounded-xl p-6">
+                <div className="flex justify-between items-center mb-4">
+                  <h3 className="text-lg font-semibold text-gray-900 dark:text-white">24h Change</h3>
+                  <div className="text-sm text-gray-500 dark:text-gray-400">Total</div>
+                </div>
+                <div className="flex items-center gap-4">
+                  <div className="text-3xl font-bold text-gray-900 dark:text-white">$1,248.90</div>
+                  <div className="text-xl font-semibold text-green-500">+1.2%</div>
+                </div>
+              </div>
+              <div className="theme-card rounded-xl p-6">
+                <div className="flex justify-between items-center mb-4">
+                  <h3 className="text-lg font-semibold text-gray-900 dark:text-white">Total Profit</h3>
+                  <div className="text-sm text-gray-500 dark:text-gray-400">All Time</div>
+                </div>
+                <div className="flex items-center gap-4">
+                  <div className="text-3xl font-bold text-gray-900 dark:text-white">$12,483.45</div>
+                  <div className="text-xl font-semibold text-green-500">+24.8%</div>
+                </div>
+              </div>
+              <div className="theme-card rounded-xl p-6">
+                <div className="flex justify-between items-center mb-4">
+                  <h3 className="text-lg font-semibold text-gray-900 dark:text-white">Current Holdings</h3>
+                  <div className="text-sm text-gray-500 dark:text-gray-400">Total Value</div>
+                </div>
+                <div className="flex items-center gap-4">
+                  <div className="text-3xl font-bold text-gray-900 dark:text-white">$45,678.90</div>
+                  <div className="text-xl font-semibold text-gray-500">12 Assets</div>
+                </div>
+              </div>
+            </div>
+
+            {/* Crypto Charts */}
+            <div className="theme-card rounded-xl p-6 mb-8">
+              <div className="flex flex-col sm:flex-row items-start sm:items-center justify-between mb-6 gap-4">
+                <div className="flex flex-col sm:flex-row items-start sm:items-center gap-4">
+                  <h2 className="text-xl font-semibold text-gray-900 dark:text-white">
+                    Crypto Analysis
+                  </h2>
+                </div>
+                
+                <div className="flex gap-2 overflow-x-auto pb-2 theme-scroll">
+                  {['1m','5m','10m','30m','1h','1D','1W','1M','1Y'].map((period) => (
+                    <button 
+                      key={period}
+                      onClick={() => {
+                        setSelectedPeriod(period);
+                        updateTradingConfig(period);
+                      }}
+                      className={`
+                        px-4 py-2 rounded-lg transition-all duration-300 whitespace-nowrap
+                        ${period === selectedPeriod ? 'theme-button' : 'theme-button-secondary'}
+                      `}
+                    >
+                      {period}
+                    </button>
+                  ))}
+                </div>
+              </div>
+              
+              {/* Integrated CryptoCharts Component */}
+              <div className="crypto-charts-wrapper">
+                <BackendStatusDashboard />
+                <div className="mb-4 text-sm">
+                  <div className="font-semibold text-gray-900 dark:text-gray-100">Cryptocurrency Analysis</div>
+                  <div className="text-gray-600 dark:text-gray-300">
+                    Last updated: {chartData.lastUpdated ? new Date(chartData.lastUpdated).toLocaleString() : new Date().toLocaleString()}
+                  </div>
+                  <div className="mt-2 text-gray-900 dark:text-gray-100">
+                    {cryptoData[currentIndex].symbol} Technical Analysis {selectedPeriod}
+                  </div>
+                  {isLoading && <div className="text-blue-500 dark:text-blue-400 text-sm">Refreshing chart data...</div>}
+                </div>
+                <CryptoCharts 
+                  refreshInterval={300000} 
+                  selectedSymbol={cryptoData[currentIndex].symbol}
+                  selectedTimeframe={selectedPeriod}
+                  isLoading={isLoading}
+                  onRefresh={() => fetchTechnicalAnalysisData(cryptoData[currentIndex].symbol, selectedPeriod)}
+                  cryptoOptions={cryptoData.map(crypto => ({
+                    name: crypto.name,
+                    symbol: crypto.symbol,
+                    imageUrl: crypto.imageUrl
+                  }))}
+                  onSymbolChange={(symbol) => {
+                    const cryptoIndex = cryptoData.findIndex(crypto => crypto.symbol === symbol);
+                    if (cryptoIndex !== -1) {
+                      setCurrentIndex(cryptoIndex);
+                      fetchTechnicalAnalysisData(symbol, selectedPeriod);
+                    }
+                  }}
+                />
+              </div>
+            </div>
+
+            {/* Bot Performance Metrics moved to Trading Strategy section */}
+
+            {/* Assets Table */}
+            <div className="theme-card rounded-xl p-6">
+              <div className="flex justify-between items-center mb-6">
+                <h2 className="text-xl font-semibold text-gray-900 dark:text-white">
+                  Your Assets
+                </h2>
+                <button 
+                  onClick={() => setIsAssetsExpanded(!isAssetsExpanded)}
+                  className="p-2 rounded hover:bg-gray-200 dark:hover:bg-gray-700 transition-colors"
+                  aria-label={isAssetsExpanded ? 'Collapse' : 'Expand'}
+                >
+                  {isAssetsExpanded ? (
+                    <svg xmlns="http://www.w3.org/2000/svg" width="20" height="20" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round">
+                      <polyline points="18 15 12 9 6 15"></polyline>
+                    </svg>
+                  ) : (
+                    <svg xmlns="http://www.w3.org/2000/svg" width="20" height="20" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round">
+                      <polyline points="6 9 12 15 18 9"></polyline>
+                    </svg>
+                  )}
+                </button>
+              </div>
+              {isAssetsExpanded && (
+                <div className="overflow-x-auto theme-scroll">
+                  <table className="w-full theme-table">
+                    <thead>
+                      <tr>
+                        <th className="text-left p-4 rounded-tl-lg text-gray-600 dark:text-gray-300">Asset</th>
+                        <th className="text-left p-4 text-gray-600 dark:text-gray-300">Price</th>
+                        <th className="text-left p-4 text-gray-600 dark:text-gray-300">Holdings</th>
+                        <th className="text-left p-4 text-gray-600 dark:text-gray-300">Value</th>
+                        <th className="text-left p-4 rounded-tr-lg text-gray-600 dark:text-gray-300">24h Change</th>
+                      </tr>
+                    </thead>
+                    <tbody>
+                      {cryptoData.map((crypto) => (
+                        <tr 
+                          key={crypto.symbol}
+                          className="transition-colors hover:bg-gray-50 dark:hover:bg-gray-700 cursor-pointer"
+                        >
+                          <td className="p-4 text-gray-900 dark:text-gray-100">
+                            <div className="flex items-center gap-3">
+                              <div className="p-2 rounded-lg bg-gray-100 dark:bg-gray-700">
+                                <img 
+                                  src={crypto.imageUrl} 
+                                  alt={crypto.symbol}
+                                  className="w-6 h-6"
+                                />
+                              </div>
+                              <div>
+                                <div className="font-medium text-gray-900 dark:text-gray-100">{crypto.name}</div>
+                                <div className="text-gray-500 dark:text-gray-300 text-sm">{crypto.symbol}</div>
+                              </div>
+                            </div>
+                          </td>
+                          <td className="p-4 text-gray-900 dark:text-gray-100">{crypto.value}</td>
+                          <td className="p-4 text-gray-900 dark:text-gray-100">{crypto.amount} {crypto.symbol}</td>
+                          <td className="p-4 text-gray-900 dark:text-gray-100">{crypto.value}</td>
+                          <td className={`p-4 ${
+                            crypto.profit.startsWith('+') ? 'text-green-500 dark:text-green-300' : 'text-red-500 dark:text-red-300'
+                          }`}>
+                            {crypto.profit}
+                          </td>
+                        </tr>
+                      ))}
+                    </tbody>
+                  </table>
+                </div>
+              )}
+            </div>
+          </div>
+        )}
+        {activeTab === 'trading' && (
+          <TradingStrategyResults 
+            selectedPeriod={selectedPeriod}
+            autoExecuteEnabled={autoExecuteEnabled}
+            onExecuteTrade={handleExecuteTrade}
+          />
+        )}
+        {activeTab === 'paper' && (
           <PaperTradingDashboard 
-            selectedPeriod={selectedPeriod} 
             autoExecuteEnabled={autoExecuteEnabled}
             onAutoExecuteChange={setAutoExecuteEnabled}
           />
-        ) : (
-          <>
-            <div className="grid grid-cols-1 md:grid-cols-3 gap-6 mb-8">
-              {/* Slot Machine Card */}
-              <div className="theme-card rounded-xl p-6 col-span-3 md:col-span-1">
-            <div className="slot-machine-container">
-              <div className="flex justify-between items-center mb-4">
-                <h3 className="text-xl font-bold text-gray-900 dark:text-white">Crypto Roller</h3>
-                <div className="space-x-2">
-                  {isSpinning && (
-                    <button 
-                      onClick={stopSpinning}
-                      className="theme-button-secondary px-4 py-2 rounded-lg"
-                    >
-                      Stop
-                    </button>
-                  )}
-                  <button 
-                    onClick={spinSlot}
-                    disabled={isDragging || isLoading}
-                    className="theme-button px-4 py-2 rounded-lg"
-                  >
-                    {isSpinning ? 'Spinning...' : 'Auto Spin'}
-                  </button>
-                </div>
-              </div>
-              <div 
-                ref={slotRef}
-                className={`slot-window bg-gray-800 dark:bg-gray-700 rounded-lg p-4 mb-4 cursor-ns-resize
-                          ${isDragging ? 'dragging' : ''}`}
-                onMouseDown={handleMouseDown}
-                onWheel={handleWheel}
-                onClick={isSpinning ? stopSpinning : undefined} /* Click to stop spinning */
-              >
-                <div 
-                  className={`slot-item ${isSpinning ? 'spinning' : ''}`}
-                  style={{
-                    transform: isDragging ? `translateY(${offsetY}px)` : 'none'
-                  }}
-                >
-                  <div className="flex items-center gap-4 p-4 bg-gray-700 dark:bg-gray-600 rounded-lg">
-                    <img 
-                      src={cryptoData[currentIndex].imageUrl} 
-                      alt={cryptoData[currentIndex].name}
-                      className="w-12 h-12 object-contain"
-                      draggable="false"
-                    />
-                    <div>
-                      <div className="text-xl font-bold text-white">
-                        {cryptoData[currentIndex].name}
-                      </div>
-                      <div className="text-gray-400">
-                        {cryptoData[currentIndex].symbol}
-                      </div>
-                    </div>
-                  </div>
-                </div>
-              </div>
-              <div className="crypto-details bg-gray-50 dark:bg-gray-800 rounded-lg p-4">
-                <div className="grid grid-cols-2 gap-4">
-                  <div>
-                    <div className="text-sm text-gray-500 dark:text-gray-400">Amount</div>
-                    <div className="text-lg font-bold text-gray-900 dark:text-white">
-                      {cryptoData[currentIndex].amount} {cryptoData[currentIndex].symbol}
-                    </div>
-                  </div>
-                  <div>
-                    <div className="text-sm text-gray-500 dark:text-gray-400">Current Price</div>
-                    <div className="text-lg font-bold text-gray-900 dark:text-white">
-                      {cryptoData[currentIndex].value}
-                    </div>
-                  </div>
-                  <div>
-                    <div className="text-sm text-gray-500 dark:text-gray-400">24h Change</div>
-                    <div className={`text-lg font-bold ${
-                      cryptoData[currentIndex].profit.startsWith('+') 
-                        ? 'text-green-500' 
-                        : 'text-red-500'
-                    }`}>
-                      {cryptoData[currentIndex].profit}
-                    </div>
-                  </div>
-                  <div>
-                    <div className="text-sm text-gray-500 dark:text-gray-400">Market Sentiment</div>
-                    <div className={`text-lg font-bold ${
-                      cryptoData[currentIndex].prediction.includes('Bull') 
-                        ? 'text-green-600 dark:text-green-400' 
-                        : cryptoData[currentIndex].prediction.includes('Bear')
-                          ? 'text-red-600 dark:text-red-400'
-                          : 'text-indigo-600 dark:text-indigo-400'
-                    }`}>
-                      {cryptoData[currentIndex].prediction}
-                    </div>
-                  </div>
-                  <div className="col-span-2 pt-2 mt-2 border-t border-gray-200 dark:border-gray-700">
-                    <div className="text-sm text-gray-500 dark:text-gray-400">Portfolio Value</div>
-                    <div className="text-lg font-bold text-gray-900 dark:text-white">
-                      ${((parseFloat(cryptoData[currentIndex].amount.replace(/,/g, '')) * 
-                         cryptoData[currentIndex].price) || 0).toLocaleString(undefined, {maximumFractionDigits: 2})}
-                    </div>
-                  </div>
-                </div>
-              </div>
-            </div>
-          </div>
-
-          <StatCard 
-            title="24h Change" 
-            value="$1,248.90" 
-            change="+1.2%" 
-            positive={true}
-            icon={<TrendingUp size={24} />}
-          />
-          <StatCard 
-            title="Total Profit" 
-            value="$12,483.45" 
-            change="+24.8%" 
-            positive={true}
-            icon={<LineChart size={24} />}
-          />
-        </div>
-
-        {/* Advanced Crypto Charts Section */}
-        <div className="theme-card rounded-xl p-6 mb-8">
-          <div className="flex items-center justify-between mb-6">
-            <h2 className="text-xl font-semibold text-gray-900 dark:text-white">
-              Crypto Analysis
-            </h2>
-            <div className="flex gap-2 overflow-x-auto pb-2 theme-scroll">
-              {['1m','5m','10m','30m','1h','1D','1W','1M','1Y'].map((period) => (
-                <button 
-                  key={period}
-                  onClick={() => {
-                    setSelectedPeriod(period);
-                    updateTradingConfig(period); // Sync with trading signals
-                  }}
-                  className={`
-                    px-4 py-2 rounded-lg transition-all duration-300 whitespace-nowrap
-                    ${period === selectedPeriod ? 'theme-button' : 'theme-button-secondary'}
-                  `}
-                >
-                  {period}
-                </button>
-              ))}
-            </div>
-          </div>
-          
-          {/* Integrated CryptoCharts Component */}
-          <div className="crypto-charts-wrapper">
-            <BackendStatusDashboard />
-            <CryptoCharts refreshInterval={300000} /> {/* Refresh every 5 minutes */}
-          </div>
-        </div>
-
-        {/* Assets Table */}
-        <div className="theme-card rounded-xl p-6">
-          <div className="flex justify-between items-center mb-6">
-            <h2 className="text-xl font-semibold text-gray-900 dark:text-white">
-              Your Assets
-            </h2>
-            <button 
-              onClick={() => setIsAssetsExpanded(!isAssetsExpanded)}
-              className="p-2 rounded hover:bg-gray-200 dark:hover:bg-gray-700 transition-colors"
-              aria-label={isAssetsExpanded ? 'Collapse' : 'Expand'}
-            >
-              {isAssetsExpanded ? (
-                <svg xmlns="http://www.w3.org/2000/svg" width="20" height="20" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round">
-                  <polyline points="18 15 12 9 6 15"></polyline>
-                </svg>
-              ) : (
-                <svg xmlns="http://www.w3.org/2000/svg" width="20" height="20" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round">
-                  <polyline points="6 9 12 15 18 9"></polyline>
-                </svg>
-              )}
-            </button>
-          </div>
-          {isAssetsExpanded && <div className="overflow-x-auto theme-scroll">
-            <table className="w-full theme-table">
-              <thead>
-                <tr>
-                  <th className="text-left p-4 rounded-tl-lg">Asset</th>
-                  <th className="text-left p-4">Price</th>
-                  <th className="text-left p-4">Holdings</th>
-                  <th className="text-left p-4">Value</th>
-                  <th className="text-left p-4 rounded-tr-lg">24h Change</th>
-                </tr>
-              </thead>
-              <tbody>
-                {cryptoData.map((crypto) => (
-                  <AssetRow 
-                    key={crypto.symbol}
-                    icon={crypto.icon}
-                    name={crypto.name}
-                    symbol={crypto.symbol}
-                    price={crypto.value}
-                    holdings={`${crypto.amount} ${crypto.symbol}`}
-                    value={crypto.value}
-                    change={crypto.profit}
-                    positive={crypto.profit.startsWith('+')}
-                    onBuy={() => {
-                      showBotThought(`Analyzing market conditions for buying ${crypto.symbol}...`);
-                      const amount = prompt(`How much ${crypto.symbol} do you want to buy?`);
-                      if (amount && !isNaN(parseFloat(amount))) {
-                        showBotThought(`Successfully bought ${amount} ${crypto.symbol}!`);
-                      }
-                    }}
-                    onSell={() => {
-                      showBotThought(`Checking your ${crypto.symbol} balance and current market price...`);
-                      const amount = prompt(`How much ${crypto.symbol} do you want to sell?`);
-                      if (amount && !isNaN(parseFloat(amount))) {
-                        showBotThought(`Successfully sold ${amount} ${crypto.symbol}!`);
-                      }
-                    }}
-                    onTransfer={() => {
-                      showBotThought(`Preparing to transfer ${crypto.symbol} between wallets...`);
-                    }}
-                    onRemove={() => {
-                      showBotThought(`Removing ${crypto.symbol} from your portfolio...`);
-                      setCryptoData(prev => prev.filter(c => c.symbol !== crypto.symbol));
-                    }}
-                  />
-                ))}
-              </tbody>
-            </table>
-          </div>}
-            </div>
-            
-            {/* Trading Strategy Results */}
-            <div className="theme-card rounded-xl p-6 mt-8">
-              <h2 className="text-xl font-semibold mb-6 text-gray-900 dark:text-white">
-                Trading Strategy Performance
-              </h2>
-              <TradingStrategyResults 
-                selectedPeriod={selectedPeriod}
-                autoExecuteEnabled={autoExecuteEnabled}
-                onExecuteTrade={async (trade) => {
-                  try {
-                    // Format the symbol (remove any / character)
-                    const formattedSymbol = trade.symbol.replace('/', '');
-                    
-                    // Prepare the request payload
-                    const payload = {
-                      command: 'execute-trade',
-                      symbol: formattedSymbol,
-                      side: trade.action,
-                      price: trade.price,
-                      confidence: trade.confidence
-                    };
-                    
-                    console.log('Sending trade execution request with payload:', payload);
-                    
-                    // Call the paper trading API to execute the trade
-                    const response = await fetch('/trading/paper', {
-                      method: 'POST',
-                      headers: {
-                        'Content-Type': 'application/json',
-                      },
-                      body: JSON.stringify(payload),
-                    });
-                    
-                    // Log the raw response
-                    console.log('Raw response status:', response.status, response.statusText);
-                    
-                    if (!response.ok) {
-                      const errorText = await response.text();
-                      console.error('Error response body:', errorText);
-                      throw new Error(`Server responded with ${response.status}: ${response.statusText}`);
-                    }
-                    
-                    const result = await response.json();
-                    console.log('Parsed response:', result);
-                    
-                    if (result.status !== 'success') {
-                      console.error('API reported error:', result.message);
-                      throw new Error(result.message || 'Failed to execute trade');
-                    }
-                    
-                    console.log('Trade executed successfully:', trade);
-                    console.log('API response:', result);
-                    
-                    // Force a refresh of the paper trading dashboard
-                    setTimeout(() => {
-                      // Dispatch a custom event to notify the PaperTradingDashboard to refresh
-                      const refreshEvent = new CustomEvent('paper-trading-update');
-                      window.dispatchEvent(refreshEvent);
-                    }, 1000);
-                    
-                    return true;
-                  } catch (err) {
-                    console.error('Error executing trade:', err);
-                    return false;
-                  }
-                }}
-              />
-            </div>
-          </>
         )}
-      </div>
-      
-      {/* Bot Thought component for displaying bot feedback */}
+        {activeTab === 'ml-insights' && (
+          <MLInsights />
+        )}
+        {activeTab === 'settings' && (
+          <div className="space-y-6">
+            {/* Settings content */}
+          </div>
+        )}
+      </main>
+
+      {/* Bot Thought Overlay */}
       {botThought.isVisible && (
-        <BotThought 
-          isVisible={botThought.isVisible} 
-          message={botThought.message} 
-          onClose={() => setBotThought(prev => ({ ...prev, isVisible: false }))} 
-        />
+        <div className="fixed bottom-4 right-4 p-4 bg-blue-500 text-white rounded-lg shadow-lg z-50">
+          {botThought.message}
+        </div>
       )}
     </div>
   );
-};
+}
+
 export default App;
