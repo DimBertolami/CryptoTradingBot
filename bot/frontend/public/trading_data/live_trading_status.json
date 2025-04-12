@@ -1,0 +1,52 @@
+{
+  "timestamp": "2025-04-05T22:59:01.113453",
+  "model_id": "temporal_fusion_transformer_v1",
+  "signals": [
+    {
+      "symbol": "BTC/USDT",
+      "currentPrice": 51338.64,
+      "signal": "SELL",
+      "confidence": 0.67844465100547,
+      "timestamp": "2025-04-05T22:59:01.113453",
+      "priceChange24h": -4.75
+    },
+    {
+      "symbol": "ETH/USDT",
+      "currentPrice": 3010.22,
+      "signal": "BUY",
+      "confidence": 0.6224235060343548,
+      "timestamp": "2025-04-05T22:59:01.113453",
+      "priceChange24h": -12.51
+    },
+    {
+      "symbol": "SOL/USDT",
+      "currentPrice": 145.73,
+      "signal": "HOLD",
+      "confidence": 0.6110889489330777,
+      "timestamp": "2025-04-05T22:59:01.113453",
+      "priceChange24h": -3.08
+    },
+    {
+      "symbol": "ADA/USDT",
+      "currentPrice": 0.53514316,
+      "signal": "SELL",
+      "confidence": 0.6474267172441657,
+      "timestamp": "2025-04-05T22:59:01.113453",
+      "priceChange24h": -9.28
+    },
+    {
+      "symbol": "BNB/USDT",
+      "currentPrice": 557.6,
+      "signal": "SELL",
+      "confidence": 0.6091298338884533,
+      "timestamp": "2025-04-05T22:59:01.113453",
+      "priceChange24h": -9.42
+    }
+  ],
+  "autoRefresh": true,
+  "thoughts": [
+    "Not enough historical data yet. Learning in progress...",
+    "Market seems bearish. Generating more sell signals than buys.",
+    "Using model: temporal_fusion_transformer_v1. Analyzing price patterns..."
+  ]
+}

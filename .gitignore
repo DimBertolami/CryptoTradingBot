@@ -1,0 +1,31 @@
+# Dependencies
+node_modules/
+venv/
+venv2/
+backend/venv/
+
+# Build outputs
+dist/
+storybook-static/
+
+# Database files
+*.db
+
+# Logs
+logs/
+*.log
+log.txt
+
+# Environment files
+.env
+.env.local
+.env.*.local
+
+# IDE files
+.vscode/
+.idea/
+
+# Cache
+__pycache__/
+*.pyc
+.pytest_cache/
