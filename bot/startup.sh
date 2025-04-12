@@ -12,7 +12,7 @@ echo -e "${GREEN}Starting Paper Trading Bot System...${NC}"
 
 # 1. Define directories
 BOT_DIR="/opt/lampp/htdocs/bot"
-BACKEND_DIR="/opt/lampp/htdocs/backend"
+BACKEND_DIR="$BOT_DIR/backend"
 FRONTEND_DIR="$BOT_DIR/frontend"
 
 # 1.1 Start resource manager to limit CPU/memory usage to 70%
@@ -63,9 +63,37 @@ fi
 
 # 5. Start backend server
 echo -e "${GREEN}Starting backend server...${NC}"
-cd "$BACKEND_DIR"
-source ../venv/bin/activate
-PYTHONPATH=/opt/lampp/htdocs:/opt/lampp/htdocs/backend uvicorn app:app --reload --port 8000 > "$BOT_DIR/backend.log" 2>&1 &
+cd "$BOT_DIR"
+
+# Create and activate virtual environment if it doesn't exist
+if [ ! -d "venv2" ]; then
+    echo -e "${YELLOW}Creating virtual environment...${NC}"
+    python3 -m venv venv2
+fi
+
+# Activate virtual environment
+source venv2/bin/activate
+
+# Set Python path to include the bot directory
+echo -e "${YELLOW}Setting Python path...${NC}"
+export PYTHONPATH=$PYTHONPATH:$BOT_DIR
+
+# Install all dependencies
+echo -e "${YELLOW}Installing all dependencies...${NC}"
+pip install -r requirements.txt
+
+# Install additional dependencies
+echo -e "${YELLOW}Installing additional dependencies...${NC}"
+pip install flask_cors
+
+# Create necessary directories
+echo -e "${YELLOW}Creating necessary directories...${NC}"
+mkdir -p logs
+mkdir -p frontend/trading_data
+
+# Start backend server
+echo -e "${YELLOW}Starting Flask API server...${NC}"
+python paper_trading_api.py > "$BOT_DIR/backend.log" 2>&1 &
 BACKEND_PID=$!
 
 # Check if backend started successfully
@@ -80,7 +108,7 @@ echo -e "${YELLOW}Verifying backend server connection...${NC}"
 MAX_RETRIES=10
 RETRY_COUNT=0
 while [ $RETRY_COUNT -lt $MAX_RETRIES ]; do
-    if curl -s "http://localhost:8000/trading/status" > /dev/null 2>&1; then
+    if curl -s "http://localhost:5001/trading/status" > /dev/null 2>&1; then
         echo -e "${GREEN}✓ Backend server is responding correctly${NC}"
         break
     else
@@ -89,28 +117,9 @@ while [ $RETRY_COUNT -lt $MAX_RETRIES ]; do
             echo -e "${RED}Backend server is not responding after $MAX_RETRIES attempts!${NC}"
             echo -e "${YELLOW}Checking backend log file for errors...${NC}"
             tail -n 20 "$BOT_DIR/backend.log"
-            echo -e "${RED}Attempting to fix backend issues...${NC}"
-            # Kill the non-responding backend process
-            kill $BACKEND_PID 2>/dev/null
-            sleep 2
-            # Try alternate Python command (some systems use python3 instead of python)
-            echo -e "${YELLOW}Trying alternate Python command...${NC}"
-            cd "$BACKEND_DIR"
-            python3 paper_trading_api.py > "$BOT_DIR/backend.log" 2>&1 &
-            BACKEND_PID=$!
-            sleep 5
-            if curl -s "http://localhost:5001/trading/status" > /dev/null 2>&1; then
-                echo -e "${GREEN}✓ Backend server started with python3 and is responding (PID: $BACKEND_PID)${NC}"
-                break
-            else
-                echo -e "${RED}Could not start backend server. Please check the configuration manually.${NC}"
-                echo -e "${YELLOW}Last 20 lines of backend log:${NC}"
-                tail -n 20 "$BOT_DIR/backend.log"
-                exit 1
-            fi
+            exit 1
         fi
-        echo -e "${YELLOW}Backend not responding yet, retrying in 2 seconds... ($RETRY_COUNT/$MAX_RETRIES)${NC}"
-        sleep 2
+        sleep 1
     fi
 done
 

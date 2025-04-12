@@ -65,3 +65,4 @@ websockets
 Werkzeug
 xyzservices
 yarl
+flask_cors
