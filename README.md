@@ -1,3 +1,8 @@
+update papertrader is currently accepting our new features!! 
+![image](https://github.com/user-attachments/assets/ca48677e-f451-4b78-bf7c-e4de2eece6c4)
+
+
+
 main dashboard:
 
 ![image](https://github.com/user-attachments/assets/96b15780-0cdb-4645-89be-3ca50c58e557)
