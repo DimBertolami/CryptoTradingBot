@@ -62,7 +62,7 @@ if [ -f "$API_KEYS_BACKUP" ] && [ ! -f "$CONFIG_FILE" ]; then
 fi
 
 # 5. Start backend server
-echo -e "${GREEN}Starting backend server...${NC}"
+echo -e "${YELLOW}Starting backend server...${NC}"
 cd "$BOT_DIR"
 
 # Create and activate virtual environment if it doesn't exist
@@ -91,6 +91,11 @@ echo -e "${YELLOW}Creating necessary directories...${NC}"
 mkdir -p logs
 mkdir -p frontend/trading_data
 
+<<<<<<< HEAD
+# Start the backend server
+echo -e "${YELLOW}Starting backend server...${NC}"
+python3 backend/paper_trading_api.py > "$BOT_DIR/backend.log" 2>&1 &
+=======
 # Configure auto-execution settings
 echo -e "${YELLOW}Configuring auto-execution settings...${NC}"
 python3 paper_trading_cli.py auto-execute --enabled true --confidence 0.75 --interval 300
@@ -98,12 +103,17 @@ python3 paper_trading_cli.py auto-execute --enabled true --confidence 0.75 --int
 # Start backend server
 echo -e "${YELLOW}Starting Flask API server...${NC}"
 python paper_trading_api.py > "$BOT_DIR/backend.log" 2>&1 &
+>>>>>>> main
 BACKEND_PID=$!
 
-# Check if backend started successfully
+# Wait for the server to start
 sleep 3
+
+# Check if backend started successfully
 if ! ps -p $BACKEND_PID > /dev/null; then
     echo -e "${RED}Failed to start backend server! Check $BOT_DIR/backend.log for details.${NC}"
+    echo -e "${YELLOW}Last 20 lines of backend log:${NC}"
+    tail -n 20 "$BOT_DIR/backend.log"
     exit 1
 fi
 

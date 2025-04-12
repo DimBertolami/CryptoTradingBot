@@ -10,11 +10,14 @@ from datetime import datetime
 from typing import Dict, List, Optional
 
 # Configure logging
+log_dir = os.path.join(os.path.dirname(os.path.abspath(__file__)), '../../logs')
+os.makedirs(log_dir, exist_ok=True)
+
 logging.basicConfig(
     level=logging.INFO,
     format='%(asctime)s - %(name)s - %(levelname)s - %(message)s',
     handlers=[
-        logging.FileHandler("logs/paper_trading.log"),
+        logging.FileHandler(os.path.join(log_dir, "paper_trading.log")),
         logging.StreamHandler()
     ]
 )
@@ -209,14 +212,19 @@ class PaperTradingStrategy:
         elif current_price < 300:  # Sell when price is low
             self._execute_trade(symbol, current_price, "SELL")
 
-    def _execute_trade(self, symbol: str, price: float, side: str) -> None:
+    def _execute_trade(self, symbol: str, price: float, side: str, quantity: Optional[float] = None) -> None:
         """Execute a trade."""
         confidence = 0.8  # Simulated confidence score
         
         if side == "BUY":
-            # Calculate quantity based on balance
-            max_spend = self.balance * 0.1  # 10% of balance
-            quantity = max_spend / price
+            if quantity is None:
+                # Calculate quantity based on balance if not specified
+                max_spend = self.balance * 0.1  # 10% of balance
+                quantity = max_spend / price
+            
+            # Ensure we don't exceed balance
+            if quantity * price > self.balance:
+                quantity = self.balance / price
             
             # Execute buy
             self.balance -= (quantity * price)
@@ -237,9 +245,14 @@ class PaperTradingStrategy:
             logger.info(f"BUY {quantity:.4f} {symbol} at {price:.2f} = {quantity*price:.4f} USDT")
             
         elif side == "SELL":
-            # Get quantity to sell (50% of holdings)
-            quantity = self.holdings.get(symbol, 0) * 0.5
+            if quantity is None:
+                # Get quantity to sell (50% of holdings)
+                quantity = self.holdings.get(symbol, 0) * 0.5
+            
             if quantity > 0:
+                if quantity > self.holdings[symbol]:
+                    quantity = self.holdings[symbol]
+                
                 # Execute sell
                 proceeds = quantity * price
                 self.balance += proceeds
