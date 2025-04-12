@@ -8,39 +8,27 @@ NC='\033[0m' # No Color
 
 echo -e "${YELLOW}Shutting down Trading Bot System...${NC}"
 
-# Try to kill specific PIDs if they were saved
-BACKEND_PID=55574
-FRONTEND_PID=55635
-
-# Try to kill backend by PID first
-if [ ! -z "55574" ] && kill 55574 2>/dev/null; then
-    echo -e "${GREEN}✓ Backend server stopped${NC}"
+# Try to kill backend by finding process on port
+echo -e "${YELLOW}Searching for backend server process...${NC}"
+FOUND_PIDS=$(lsof -t -i:5001 2>/dev/null)
+if [ ! -z "$FOUND_PIDS" ]; then
+    echo -e "${YELLOW}Found backend processes: $FOUND_PIDS${NC}"
+    kill $FOUND_PIDS 2>/dev/null
+    echo -e "${GREEN}✓ Backend server(s) stopped${NC}"
 else
-    echo -e "${YELLOW}Searching for backend server process...${NC}"
-    FOUND_PIDS=$(lsof -t -i:5001 2>/dev/null)
+    echo -e "${RED}No backend server found running on port 5001${NC}"
+fi
+
+# Try to kill frontend processes
+echo -e "${YELLOW}Searching for frontend server processes...${NC}"
+for PORT in 5173 5174 5175 5176 5177 5178 5179 5180; do
+    FOUND_PIDS=$(lsof -t -i:$PORT 2>/dev/null)
     if [ ! -z "$FOUND_PIDS" ]; then
-        echo -e "${YELLOW}Found backend processes: $FOUND_PIDS${NC}"
+        echo -e "${YELLOW}Found frontend on port $PORT: $FOUND_PIDS${NC}"
         kill $FOUND_PIDS 2>/dev/null
-        echo -e "${GREEN}✓ Backend server(s) stopped${NC}"
-    else
-        echo -e "${RED}No backend server found running on port 5001${NC}"
+        echo -e "${GREEN}✓ Frontend server on port $PORT stopped${NC}"
     fi
-fi
-
-# Try to kill frontend by PID first
-if [ ! -z "55635" ] && kill 55635 2>/dev/null; then
-    echo -e "${GREEN}✓ Frontend server stopped${NC}"
-else
-    echo -e "${YELLOW}Searching for frontend server processes...${NC}"
-    for PORT in 5173 5174 5175 5176 5177 5178 5179 5180; do
-        FOUND_PIDS=$(lsof -t -i:$PORT 2>/dev/null)
-        if [ ! -z "$FOUND_PIDS" ]; then
-            echo -e "${YELLOW}Found frontend on port $PORT: $FOUND_PIDS${NC}"
-            kill $FOUND_PIDS 2>/dev/null
-            echo -e "${GREEN}✓ Frontend server on port $PORT stopped${NC}"
-        fi
-    done
-fi
+done
 
 # Stop resource manager
 if [ -f "$BOT_DIR/resource_manager_service.sh" ]; then
