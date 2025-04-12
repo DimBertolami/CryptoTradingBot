@@ -31,6 +31,7 @@ Just add your api key and secret and the bot is ready to play with the big boys,
 the internals section is where the bot is supposed to explain to me how it makes his decisions, and evaluates his own performance, so that he can make adjustments to his strategy. Still alot of work to do, but it's getting there
 ![image](https://github.com/user-attachments/assets/f27b7985-64bb-48b6-ae5d-83fbfa94d999)
 ![image](https://github.com/user-attachments/assets/9a768dfc-c860-4f48-89bc-f4302ebc670e)
+![image](https://github.com/user-attachments/assets/c2422114-a17b-4d8a-ae36-ae709cab80c3)
 
 and last screenshot i want to share is the dark mode 
 ![image](https://github.com/user-attachments/assets/09ddf29d-f483-46cb-adc8-d63f6acb4afd)
