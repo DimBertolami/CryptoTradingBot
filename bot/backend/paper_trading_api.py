@@ -11,6 +11,7 @@ import time
 import logging
 from datetime import datetime
 from flask import Flask, jsonify, request, Blueprint
+from flask_cors import CORS
 
 # Add parent directory to path for imports
 parent_dir = os.path.abspath(os.path.join(os.path.dirname(__file__), '..'))
@@ -19,11 +20,14 @@ sys.path.append(parent_dir)
 from strategies.paper_trading import PaperTradingStrategy
 
 # Configure logging
+log_dir = os.path.join(os.path.dirname(os.path.abspath(__file__)), '../logs')
+os.makedirs(log_dir, exist_ok=True)
+
 logging.basicConfig(
     level=logging.INFO,
     format='%(asctime)s - %(name)s - %(levelname)s - %(message)s',
     handlers=[
-        logging.FileHandler("paper_trading_api.log"),
+        logging.FileHandler(os.path.join(log_dir, "paper_trading_api.log")),
         logging.StreamHandler()
     ]
 )
@@ -86,18 +90,25 @@ def update_status_file():
 @paper_trading_bp.route('/paper', methods=['GET'])
 def get_status():
     """Get the current paper trading status"""
-    update_status_file()
-    
-    return jsonify({
-        "status": "success",
-        "data": {
-            "is_running": strategy.is_running,
-            "mode": strategy.mode,
-            "balance": strategy.balance,
-            "portfolio_value": strategy.calculate_portfolio_value(),
-            "last_updated": datetime.now().isoformat()
-        }
-    })
+    try:
+        update_status_file()
+        
+        return jsonify({
+            "status": "success",
+            "data": {
+                "is_running": strategy.is_running,
+                "mode": strategy.mode,
+                "balance": strategy.balance,
+                "portfolio_value": strategy.calculate_portfolio_value(),
+                "last_updated": datetime.now().isoformat()
+            }
+        })
+    except Exception as e:
+        logger.error(f"Error in get_status: {e}")
+        return jsonify({
+            "status": "error",
+            "message": str(e)
+        }), 500
 
 
 @paper_trading_bp.route('/paper', methods=['POST'])
@@ -116,7 +127,69 @@ def handle_command():
         logger.info(f"Received command: {command}")
         
         # Handle different commands
-        if command == 'start':
+        if command in ['execute', 'trade']:
+            # Execute trade command
+            try:
+                symbol = data.get('symbol')
+                side = data.get('side')
+                price = data.get('price')
+                quantity = data.get('quantity')
+                confidence = data.get('confidence', 0.75)
+                note = data.get('note', '')
+                
+                if not all([symbol, side, price]):
+                    return jsonify({
+                        "status": "error",
+                        "message": "Missing required parameters: symbol, side, and price are required"
+                    }), 400
+                
+                # Validate side parameter
+                if side.upper() not in ['BUY', 'SELL']:
+                    return jsonify({
+                        "status": "error",
+                        "message": f"Invalid side parameter: {side}. Must be 'BUY' or 'SELL'"
+                    }), 400
+                
+                # Convert price to float
+                try:
+                    price = float(price)
+                except ValueError:
+                    return jsonify({
+                        "status": "error",
+                        "message": f"Invalid price value: {price}"
+                    }), 400
+                
+                # Execute the trade
+                try:
+                    strategy._execute_trade(symbol, price, side.upper(), quantity)
+                    update_status_file()
+                    
+                    return jsonify({
+                        "status": "success",
+                        "message": f"Trade executed: {side.upper()} {symbol} at {price}",
+                        "data": {
+                            "symbol": symbol,
+                            "side": side.upper(),
+                            "price": price,
+                            "quantity": quantity,
+                            "confidence": confidence,
+                            "note": note
+                        }
+                    })
+                except Exception as e:
+                    logger.error(f"Error executing trade: {e}")
+                    return jsonify({
+                        "status": "error",
+                        "message": f"Failed to execute trade: {str(e)}"
+                    }), 500
+            except Exception as e:
+                logger.error(f"Error processing trade parameters: {e}")
+                return jsonify({
+                    "status": "error",
+                    "message": f"Invalid trade parameters: {str(e)}"
+                }), 400
+                
+        elif command == 'start':
             interval = data.get('interval', 300)  # Default to 5 minutes
             
             if strategy.is_running:
@@ -191,70 +264,6 @@ def handle_command():
                 "message": "Account reset to initial state"
             })
             
-        elif command == 'trade':
-            try:
-                # Validate required parameters
-                if 'side' not in data or 'symbol' not in data or 'price' not in data:
-                    return jsonify({
-                        "status": "error",
-                        "message": "Missing required parameters: side, symbol, and price are required"
-                    }), 400
-                
-                # Extract parameters
-                side = data['side'].upper()  # Normalize to uppercase
-                symbol = data['symbol']
-                price = float(data['price'])
-                confidence = float(data.get('confidence', 1.0))
-                note = data.get('note', f"Manual {side} trade for {symbol} at {price}")
-                
-                # Validate side parameter
-                if side not in ['BUY', 'SELL']:
-                    return jsonify({
-                        "status": "error",
-                        "message": f"Invalid side parameter: {side}. Must be 'BUY' or 'SELL'"
-                    }), 400
-                
-                # Convert side to signal (1 for BUY, -1 for SELL)
-                signal = 1 if side == 'BUY' else -1
-                
-                # Execute the trade
-                logger.info(f"Executing manual trade: {side} {symbol} at {price} with confidence {confidence}")
-                
-                if strategy.mode == 'paper':
-                    trade_result = strategy.paper_trade(symbol, signal, price, is_suggested=False, confidence=confidence)
-                else:
-                    trade_result = strategy.live_trade(symbol, signal, price, is_suggested=False, confidence=confidence)
-                
-                # Log the trade with the provided note
-                if trade_result and note:
-                    logger.info(f"Trade note: {note}")
-                    # Add note to trade history if applicable
-                    if strategy.trade_history and len(strategy.trade_history) > 0:
-                        latest_trade = strategy.trade_history[-1]
-                        if 'note' not in latest_trade:
-                            latest_trade['note'] = note
-                
-                # Update status file immediately
-                update_status_file()
-                
-                if trade_result:
-                    return jsonify({
-                        "status": "success",
-                        "message": f"Trade executed: {side} {symbol} at {price}",
-                        "trade": trade_result
-                    })
-                else:
-                    return jsonify({
-                        "status": "error",
-                        "message": "Trade execution failed. Check logs for details."
-                    }), 500
-            except Exception as e:
-                logger.error(f"Error executing trade: {e}")
-                return jsonify({
-                    "status": "error",
-                    "message": f"Trade execution error: {str(e)}"
-                }), 500
-                
         elif command == 'api':
             api_key = data.get('key', '')
             api_secret = data.get('secret', '')
@@ -389,6 +398,9 @@ def get_api_status():
 
 def init_app(app):
     """Initialize the Flask app with the paper trading blueprint"""
+    # Enable CORS for all routes
+    CORS(app, resources={r"/trading/*": {"origins": "*"}})
+    
     app.register_blueprint(paper_trading_bp, url_prefix='/trading')
     
     # Create an initial status file if it doesn't exist
@@ -399,7 +411,7 @@ def init_app(app):
 
 
 if __name__ == "__main__":
-    # This can be run as a standalone service for testing
+    # This can be run as a standalone service
     app = Flask(__name__)
     init_app(app)
     app.run(debug=True, port=5001)

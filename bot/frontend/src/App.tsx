@@ -457,7 +457,7 @@ function App() {
   const handleExecuteTrade = async (trade: TradeAction): Promise<boolean> => {
     try {
       // Execute the trade through paper trading service
-      const tradeResult = await fetch('/trading/paper', {
+      const tradeResult = await fetch('http://localhost:5001/trading/paper', {
         method: 'POST',
         headers: {
           'Content-Type': 'application/json',
