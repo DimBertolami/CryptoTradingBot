@@ -249,4 +249,8 @@ class MLTradingStrategy(BaseStrategy):
     def _create_training_env(self, market_data: pd.DataFrame):
         """Create training environment for RL"""
         from ..ml.environment import TradingEnvironment
+<<<<<<< HEAD:cryptobot/bot/strategies/ml_strategy.py
         return TradingEnvironment(market_data)
+=======
+        return TradingEnvironment(market_data)
+>>>>>>> ea1c38704abbb74e8dbb0c9c3275c87e413a456d:bot/strategies/ml_strategy.py

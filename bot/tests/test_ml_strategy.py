@@ -95,4 +95,8 @@ class TestMLTradingStrategy(unittest.TestCase):
         self.assertFalse(limited_trade['success'])
 
 if __name__ == '__main__':
+<<<<<<< HEAD
     unittest.main()
+=======
+    unittest.main()
+>>>>>>> ea1c38704abbb74e8dbb0c9c3275c87e413a456d
