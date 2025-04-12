@@ -91,6 +91,10 @@ echo -e "${YELLOW}Creating necessary directories...${NC}"
 mkdir -p logs
 mkdir -p frontend/trading_data
 
+# Configure auto-execution settings
+echo -e "${YELLOW}Configuring auto-execution settings...${NC}"
+python3 paper_trading_cli.py auto-execute --enabled true --confidence 0.75 --interval 300
+
 # Start backend server
 echo -e "${YELLOW}Starting Flask API server...${NC}"
 python paper_trading_api.py > "$BOT_DIR/backend.log" 2>&1 &

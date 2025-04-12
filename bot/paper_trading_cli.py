@@ -125,6 +125,9 @@ def main():
     # Initialize strategy
     strategy = PaperTradingStrategy(config_file=config_file)
     
+    # Store config_file path in strategy instance for later use
+    strategy.config_file = config_file
+    
     # Process commands
     if args.command == 'start':
         if strategy.is_running:
