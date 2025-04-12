@@ -60,15 +60,21 @@ class PaperTradingStrategy:
         except Exception as e:
             logger.error(f"Error loading configuration: {str(e)}")
 
-    def save_config(self, config_file: str) -> None:
+    def save_config(self, config_file: str = None) -> None:
         """Save current configuration to file."""
         try:
-            os.makedirs(os.path.dirname(config_file), exist_ok=True)
-            with open(config_file, 'w') as f:
+            # Use provided config_file or fall back to instance config_file
+            save_file = config_file or getattr(self, 'config_file', None)
+            if not save_file:
+                raise ValueError("No config file path provided")
+                
+            os.makedirs(os.path.dirname(save_file), exist_ok=True)
+            with open(save_file, 'w') as f:
                 json.dump(self.config, f, indent=2)
-            logger.info(f"Saved configuration to {config_file}")
+            logger.info(f"Saved configuration to {save_file}")
         except Exception as e:
             logger.error(f"Error saving configuration: {str(e)}")
+            raise
 
     def update_config(self, config: Dict) -> None:
         """Update configuration settings."""
