@@ -1,13 +1,21 @@
 import React, { useState, useEffect } from 'react';
 import { LineChart, Line, XAxis, YAxis, CartesianGrid, Tooltip, Legend, ResponsiveContainer } from 'recharts';
-import { Card, CardContent, Typography, Grid, Box, CircularProgress } from '@mui/material';
-import { format } from 'date-fns';
+import { Card, CardContent, Typography, Box, CircularProgress } from '@mui/material';
+import { Grid } from '@mui/material';
+
 
 interface RiskMetrics {
   riskLevel: number;
   volatility: number;
   drawdown: number;
   confidence: number;
+  cumulativeProfit: number;
+  botConfidence: number;
+  learningProgress: {
+    accuracyScore: number;
+    trainingEpochs: number;
+    lastUpdated: string;
+  };
   strategyPerformance: {
     [key: string]: {
       exposure: number;
@@ -34,10 +42,34 @@ const RiskDashboard: React.FC = () => {
 
   const fetchMetrics = async () => {
     try {
-      // In a real application, this would be an API call
-      const response = await fetch('/api/risk/metrics');
-      const data = await response.json();
-      setMetrics(data);
+      // For development, use sample data
+      // In production, this would be: await fetch('/trading/risk/metrics');
+      const sampleData: RiskMetrics = {
+        riskLevel: 0.65,
+        volatility: 0.25,
+        drawdown: -0.15,
+        confidence: 0.85,
+        cumulativeProfit: 2850.75,
+        botConfidence: 0.82,
+        learningProgress: {
+          accuracyScore: 0.78,
+          trainingEpochs: 150,
+          lastUpdated: new Date().toISOString()
+        },
+        strategyPerformance: {
+          'Mean Reversion': { exposure: 0.3, returns: 0.12, risk: 0.4 },
+          'Trend Following': { exposure: 0.4, returns: 0.15, risk: 0.6 },
+          'Breakout': { exposure: 0.2, returns: 0.08, risk: 0.3 },
+          'ML-Based': { exposure: 0.1, returns: 0.18, risk: 0.7 }
+        },
+        portfolioMetrics: {
+          sharpeRatio: 1.8,
+          sortinoRatio: 2.1,
+          maxDrawdown: 0.25,
+          volatility: 0.2
+        }
+      };
+      setMetrics(sampleData);
     } catch (error) {
       console.error('Error fetching metrics:', error);
     } finally {
@@ -60,9 +92,9 @@ const RiskDashboard: React.FC = () => {
   const formatPercentage = (value: number) => `${(value * 100).toFixed(2)}%`;
 
   return (
-    <Grid container spacing={3} p={3}>
+    <Grid container spacing={3} sx={{ p: 3 }}>
       {/* Risk Level Card */}
-      <Grid item xs={12} md={4}>
+      <Grid {...{ item: true, xs: 12, md: 4 }}>
         <Card>
           <CardContent>
             <Typography variant="h6" gutterBottom>
@@ -80,30 +112,63 @@ const RiskDashboard: React.FC = () => {
         </Card>
       </Grid>
 
+      {/* Bot Learning Metrics Card */}
+      <Grid {...{ item: true, xs: 12, md: 8 }}>
+        <Card>
+          <CardContent>
+            <Typography variant="h6" gutterBottom>
+              Bot Learning & Performance
+            </Typography>
+            <Grid container spacing={2}>
+              <Grid {...{ item: true, xs: 6 }}>
+                <Typography variant="body1" color="primary">
+                  Cumulative Profit: ${metrics.cumulativeProfit.toFixed(2)}
+                </Typography>
+              </Grid>
+              <Grid {...{ item: true, xs: 6 }}>
+                <Typography variant="body1" color="primary">
+                  Bot Confidence: {formatPercentage(metrics.botConfidence)}
+                </Typography>
+              </Grid>
+              <Grid {...{ item: true, xs: 6 }}>
+                <Typography variant="body1">
+                  Accuracy Score: {formatPercentage(metrics.learningProgress.accuracyScore)}
+                </Typography>
+              </Grid>
+              <Grid {...{ item: true, xs: 6 }}>
+                <Typography variant="body1">
+                  Training Epochs: {metrics.learningProgress.trainingEpochs}
+                </Typography>
+              </Grid>
+            </Grid>
+          </CardContent>
+        </Card>
+      </Grid>
+
       {/* Portfolio Metrics Card */}
-      <Grid item xs={12} md={8}>
+      <Grid {...{ item: true, xs: 12, md: 8 }}>
         <Card>
           <CardContent>
             <Typography variant="h6" gutterBottom>
               Portfolio Metrics
             </Typography>
             <Grid container spacing={2}>
-              <Grid item xs={6}>
+              <Grid {...{ item: true, xs: 6 }}>
                 <Typography variant="body1">
                   Sharpe Ratio: {metrics.portfolioMetrics.sharpeRatio.toFixed(2)}
                 </Typography>
               </Grid>
-              <Grid item xs={6}>
+              <Grid {...{ item: true, xs: 6 }}>
                 <Typography variant="body1">
                   Sortino Ratio: {metrics.portfolioMetrics.sortinoRatio.toFixed(2)}
                 </Typography>
               </Grid>
-              <Grid item xs={6}>
+              <Grid {...{ item: true, xs: 6 }}>
                 <Typography variant="body1">
                   Max Drawdown: {formatPercentage(metrics.portfolioMetrics.maxDrawdown)}
                 </Typography>
               </Grid>
-              <Grid item xs={6}>
+              <Grid {...{ item: true, xs: 6 }}>
                 <Typography variant="body1">
                   Volatility: {formatPercentage(metrics.portfolioMetrics.volatility)}
                 </Typography>
@@ -114,7 +179,7 @@ const RiskDashboard: React.FC = () => {
       </Grid>
 
       {/* Strategy Performance Chart */}
-      <Grid item xs={12}>
+      <Grid {...{ item: true, xs: 12 }}>
         <Card>
           <CardContent>
             <Typography variant="h6" gutterBottom>
@@ -144,7 +209,7 @@ const RiskDashboard: React.FC = () => {
       </Grid>
 
       {/* Risk Heatmap */}
-      <Grid item xs={12}>
+      <Grid {...{ item: true, xs: 12 }}>
         <Card>
           <CardContent>
             <Typography variant="h6" gutterBottom>
@@ -152,7 +217,7 @@ const RiskDashboard: React.FC = () => {
             </Typography>
             <Grid container spacing={2}>
               {Object.entries(metrics.strategyPerformance).map(([strategy, data]) => (
-                <Grid item xs={6} md={3} key={strategy}>
+                <Grid {...{ item: true, xs: 6, md: 3, key: strategy }}>
                   <Box
                     sx={{
                       p: 2,
