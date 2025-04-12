@@ -15,21 +15,62 @@
 
 ## Starting the Application
 
-### 1. Backend Service
-```bash
-# Start the backend service
-sudo ./launch_be.sh
+### Using the Startup Script
+The recommended way to start the application is using the `startup.sh` script:
 
-# Check service status
-sudo systemctl status cryptobot-backend
+```bash
+./bot/startup.sh
 ```
 
-### 2. Frontend Service
-```bash
-# Start the frontend service
-sudo ./launch_fe.sh
+This script handles the complete startup process:
 
-# Access the application at http://localhost:3000
+1. **Resource Management**
+   - Starts the resource manager service
+   - Limits CPU/memory usage to 70%
+   - Prevents system overload during heavy trading
+
+2. **Process Management**
+   - Checks for and cleanly stops any existing processes
+   - Manages ports 5001 (backend) and 5173-5179 (frontend)
+   - Creates necessary config directories
+
+3. **Backend Service**
+   - Activates Python virtual environment
+   - Sets correct PYTHONPATH
+   - Starts backend on port 8000
+   - Verifies API responsiveness with health checks
+   - Auto-retries up to 10 times if startup fails
+
+4. **Frontend Service**
+   - Verifies Vite configuration
+   - Configures API proxy settings
+   - Starts development server
+   - Finds available port (5173-5179)
+   - Monitors startup progress
+
+5. **Automatic Cleanup**
+   - Creates a companion `shutdown.sh` script
+   - Registers process IDs for clean shutdown
+   - Enables proper resource cleanup
+
+### Accessing the Application
+After successful startup, you can access:
+- Frontend UI: http://localhost:5173
+- Backend API: http://localhost:5001/trading
+
+### Monitoring & Troubleshooting
+```bash
+# View backend logs
+tail -n 30 /opt/lampp/htdocs/bot/backend.log
+
+# View frontend logs
+tail -n 30 /opt/lampp/htdocs/bot/frontend.log
+
+# Check backend health
+curl http://localhost:5001/trading/status
+
+# Stop all services
+/opt/lampp/htdocs/bot/shutdown.sh
 ```
 
 ## Service Management
@@ -164,5 +205,4 @@ For any issues not covered in this guide:
 1. Check the logs first
 2. Verify system requirements
 3. Check network connectivity
-4. Contact support with error messages and logs
-
+4. Contact me with error messages and logs
