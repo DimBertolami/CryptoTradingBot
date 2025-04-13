@@ -1,4 +1,4 @@
-import React, { useState, useEffect } from 'react';
+import React, { useState, useEffect, useCallback } from 'react';
 import './BackendStatusDashboard.css';
 
 interface ServiceStatus {
@@ -82,15 +82,15 @@ const BackendStatusDashboard: React.FC = () => {
       },
       logs: {
         backend: {
-          path: '/home/dim/git/Cryptobot/logs/backend.log',
+          path: '../logs/backend.log',
           last_modified: timestamp
         },
         signals: {
-          path: '/home/dim/git/Cryptobot/logs/signals.log',
+          path: '../logs/signals.log',
           last_modified: timestamp
         },
         paper_trading: {
-          path: '/opt/lampp/htdocs/bot/logs/paper_trading.log',
+          path: '../logs/paper_trading.log',
           last_modified: timestamp
         }
       }
@@ -99,59 +99,52 @@ const BackendStatusDashboard: React.FC = () => {
   };
   
   // Attempt to ping each service to determine availability
-  const checkServiceAvailability = async () => {
-    const endpoints = {
-      backend: '/trading/backend_status',
-      signals: '/trading/signals_status',
-      paper_trading: '/trading/paper_trading_status',
-      database: '/trading/database_status'
-    };
-    
-    // Start with fallback data
-    const currentStatus = generateFallbackStatus();
-    currentStatus.timestamp = new Date().toISOString();
-    
-    // Check each service endpoint
-    for (const [service, endpoint] of Object.entries(endpoints)) {
-      try {
-        const controller = new AbortController();
-        const timeoutId = setTimeout(() => controller.abort(), 2000);
-        const response = await fetch(endpoint, { method: 'GET', signal: controller.signal });
-        clearTimeout(timeoutId);
-        if (response.ok) {
-          const data = await response.json();
-          // Use Record type to avoid eslint warnings
-          (currentStatus.services as Record<string, ServiceStatus>)[service].status = 'active';
-          if (data.pid) (currentStatus.services as Record<string, ServiceStatus>)[service].pid = data.pid;
-          if (service === 'paper_trading' && data.trading_active !== undefined) {
-            // Use Record type to avoid eslint warnings
-            (currentStatus.services as Record<string, ServiceStatus>)[service].trading_active = data.trading_active;
-          }
-        } else {
-          // Use Record type to avoid eslint warnings
-          (currentStatus.services as Record<string, ServiceStatus>)[service].status = 'inactive';
-        }
-      } catch (err) {
-        console.log(`Service ${service} check failed:`, err);
-        // Use Record type to avoid eslint warnings
-        (currentStatus.services as Record<string, ServiceStatus>)[service].status = 'unreachable';
-      }
+  const checkServiceAvailability = useCallback(async () => {
+    try {
+      // Check backend status
+      const backendResponse = await fetch('/trading/paper');
+      const backendStatus = await backendResponse.json();
+      
+      // Check signals service
+      const signalsResponse = await fetch('/trading/paper?command=check_signals');
+      const signalsStatus = await signalsResponse.json();
+      
+      // Check paper trading status
+      const paperTradingResponse = await fetch('/trading/paper?command=check_paper_trading');
+      const paperTradingStatus = await paperTradingResponse.json();
+      
+      // Check database status
+      const databaseResponse = await fetch('/trading/paper?command=check_database');
+      const databaseStatus = await databaseResponse.json();
+      
+      const currentStatus = generateFallbackStatus();
+      currentStatus.timestamp = new Date().toISOString();
+      
+      (currentStatus.services as Record<string, ServiceStatus>).backend.status = backendStatus.success ? 'active' : 'inactive';
+      (currentStatus.services as Record<string, ServiceStatus>).signals.status = signalsStatus.success ? 'active' : 'inactive';
+      (currentStatus.services as Record<string, ServiceStatus>).paper_trading.status = paperTradingStatus.success ? 'active' : 'inactive';
+      (currentStatus.services as Record<string, ServiceStatus>).database.status = databaseStatus.success ? 'active' : 'inactive';
+      
+      return currentStatus;
+    } catch (err) {
+      console.error('Error checking service availability:', err);
+      const fallbackStatus = generateFallbackStatus();
+      fallbackStatus.error = err instanceof Error ? err.message : 'Unknown error';
+      return fallbackStatus;
     }
-    
-    return currentStatus;
-  };
+  }, []);
 
   // Keep track of manually resolved services to prevent them from being marked as inactive on refresh
   const [resolvedServices, setResolvedServices] = useState<string[]>([]);
 
   // Function to fetch backend status
-  const fetchStatus = async () => {
+  const fetchStatus = useCallback(async () => {
     try {
       setLoading(true);
       
-      // Try to fetch the backend status file
+      // Try to fetch the backend status file through the proxy
       try {
-        const response = await fetch('/trading_data/backend_status.json');
+        const response = await fetch('/trading/paper');
         
         if (response.ok) {
           const data = await response.json();
@@ -205,11 +198,18 @@ const BackendStatusDashboard: React.FC = () => {
       }
       
       setStatus(fallbackStatus);
-      setErrorMessage('Partial status information available');
+      setLastUpdated(new Date());
+      setErrorMessage(err instanceof Error ? err.message : 'Unknown error occurred');
     } finally {
       setLoading(false);
     }
-  };
+  }, [resolvedServices]);
+
+  // Poll for status updates
+  useEffect(() => {
+    const interval = setInterval(fetchStatus, 5000);
+    return () => clearInterval(interval);
+  }, [fetchStatus]);
 
   // Format date for display
   const formatDate = (dateStr: string): string => {
@@ -291,7 +291,7 @@ const BackendStatusDashboard: React.FC = () => {
       return () => clearInterval(intervalId);
     }
     // eslint-disable-next-line react-hooks/exhaustive-deps
-  }, [autoRefresh]);
+  }, [autoRefresh, fetchStatus]);
 
   // Calculate overall system health percentage
   const calculateSystemHealth = (): { percentage: number; label: string } => {
@@ -316,102 +316,43 @@ const BackendStatusDashboard: React.FC = () => {
   const systemHealth = calculateSystemHealth();
   
   // Function to attempt to resolve a specific service issue
-  const resolveService = async (serviceKey: string) => {
-    setResolvingService(serviceKey);
-    console.log(`Attempting to resolve ${serviceKey} service issues...`);
-    
+  const resolveService = async (service: string) => {
     try {
-      // Determine the appropriate command based on the service type
-      let command;
-      let resultMessage;
+      // Get the service command from the status file
+      const statusFile = await fetch('/trading_data/paper_trading_status.json');
+      const status = await statusFile.json();
       
-      switch (serviceKey) {
-        case 'backend':
-          command = '/home/dim/git/Cryptobot/scripts/restart_backend.sh';
-          resultMessage = 'Trading Engine restarted successfully';
-          break;
-        case 'signals':
-          command = '/home/dim/git/Cryptobot/scripts/restart_signals.sh';
-          resultMessage = 'Signal Generator restarted successfully';
-          break;
-        case 'paper_trading':
-          command = 'python /opt/lampp/htdocs/bot/paper_trading_cli.py restart';
-          resultMessage = 'Paper Trading service restarted successfully';
-          break;
-        case 'database':
-          command = '/home/dim/git/Cryptobot/scripts/restart_database.sh';
-          resultMessage = 'Database service restarted successfully';
-          break;
-        default:
-          command = null;
-          resultMessage = `No restart command defined for ${serviceKey}`;
-      }
+      // Get the service log path from status
+      const logPath = status.logs?.[service]?.path;
       
-      if (command) {
-        // First, attempt to actually restart the service using our API
-        try {
-          const restartResponse = await fetch(`/api/restart-service/${serviceKey}`, {
-            method: 'POST',
-            headers: { 'Content-Type': 'application/json' }
-          });
-          
-          if (restartResponse.ok) {
-            const restartResult = await restartResponse.json();
-            console.log(`Service ${serviceKey} restart result:`, restartResult);
-            
-            if (!restartResult.success) {
-              console.warn(`Service restart was not successful: ${restartResult.message}`);
-              setErrorMessage(restartResult.message);
-              return;
-            }
-          } else {
-            console.warn('Failed to restart service:', await restartResponse.text());
-            setErrorMessage(`Failed to restart ${serviceKey}: server error`);
-            return;
-          }
-        } catch (error) {
-          const restartError = error as Error;
-          console.error('Error restarting service:', restartError);
-          setErrorMessage(`Error restarting ${serviceKey}: ${restartError.message || 'Unknown error'}`);
-          return;
+      // If service is not running, try to start it
+      if (status.services?.[service]?.status !== 'active') {
+        // Use the proper command path
+        const command = 'python3 backend/paper_trading_cli.py restart';
+        
+        // Execute the command
+        const result = await fetch('/api/execute-command', {
+          method: 'POST',
+          headers: {
+            'Content-Type': 'application/json',
+          },
+          body: JSON.stringify({
+            command,
+            service,
+            logPath
+          })
+        });
+        
+        if (!result.ok) {
+          throw new Error('Failed to execute command');
         }
         
-        // As a fallback, also update the status file directly
-        try {
-          await fetch('/update_backend_status.php', {
-            method: 'POST',
-            headers: { 'Content-Type': 'application/json' },
-            body: JSON.stringify({
-              action: 'resolve_service',
-              service: serviceKey
-            })
-          });
-        } catch (updateError) {
-          console.warn('Error updating backend status file:', updateError);
-        }
-        
-        // Short delay for UI feedback
-        await new Promise(resolve => setTimeout(resolve, 500));
-        
-        // Add this service to our resolved services list for the UI
-        setResolvedServices(prev => [...prev, serviceKey]);
-        
-        // Update the UI optimistically
-        if (status) {
-          const updatedStatus = { ...status };
-          (updatedStatus.services as Record<string, ServiceStatus>)[serviceKey].status = 'active';
-          setStatus(updatedStatus);
-        }
-        
-        setErrorMessage(resultMessage);
-      } else {
-        setErrorMessage(resultMessage);
+        return true;
       }
+      return false;
     } catch (error) {
-      console.error('Failed to resolve service:', error);
-      setErrorMessage(`Failed to resolve ${serviceKey} service issues`);
-    } finally {
-      setResolvingService(null);
+      console.error('Error resolving service:', error);
+      return false;
     }
   };
   

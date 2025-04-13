@@ -6,22 +6,30 @@ This strategy simulates trading without real money, allowing for testing and ana
 import json
 import os
 import logging
-from datetime import datetime
 from typing import Dict, List, Optional
+from datetime import datetime
+from pathlib import Path
 
 # Configure logging
-log_dir = os.path.join(os.path.dirname(os.path.abspath(__file__)), '../../logs')
-os.makedirs(log_dir, exist_ok=True)
+BASE_DIR = Path(__file__).resolve().parent.parent
+FRONTEND_DIR = BASE_DIR / 'frontend'
+TRADING_DATA_DIR = FRONTEND_DIR / 'trading_data'
+LOGS_DIR = BASE_DIR / 'logs'
 
+# Create directories if they don't exist
+os.makedirs(TRADING_DATA_DIR, exist_ok=True)
+os.makedirs(LOGS_DIR, exist_ok=True)
+
+# Configure logging
 logging.basicConfig(
     level=logging.INFO,
     format='%(asctime)s - %(name)s - %(levelname)s - %(message)s',
     handlers=[
-        logging.FileHandler(os.path.join(log_dir, "paper_trading.log")),
+        logging.FileHandler(LOGS_DIR / 'paper_trading.log'),
         logging.StreamHandler()
     ]
 )
-logger = logging.getLogger("paper_trading")
+logger = logging.getLogger(__name__)
 
 class PaperTradingStrategy:
     def __init__(self, config_file: Optional[str] = None):
@@ -34,16 +42,38 @@ class PaperTradingStrategy:
         self.last_prices = {}  # symbol: price
         self.trade_history = []
         self.symbols = []  # List of trading symbols
+        
+        # Default configuration
         self.config = {
-            'auto_execute_suggested_trades': False,
-            'min_confidence_threshold': 0.7,
-            'suggested_trade_refresh_interval': 60
+            'auto_execute_suggested_trades': True,
+            'min_confidence_threshold': 0.75,
+            'suggested_trade_refresh_interval': 300,
+            'initial_balance': 10000.0,
+            'trading_interval': 300,
+            'symbols': [],
+            'last_updated': datetime.now().isoformat()
         }
-        self.trading_interval = 300  # Default interval
-
-        # Load configuration if provided
-        if config_file and os.path.exists(config_file):
+        
+        # Set default config file path if not provided
+        if config_file is None:
+            config_file = TRADING_DATA_DIR / 'trading_config.json'
+            
+        self.config_file = config_file
+        
+        # Load configuration if file exists
+        if os.path.exists(config_file):
             self.load_config(config_file)
+        else:
+            # Save default config if file doesn't exist
+            self.save_config()
+        
+        # Update instance variables from config
+        self.balance = self.config.get('initial_balance', 10000.0)
+        self.symbols = self.config.get('symbols', [])
+        self.trading_interval = self.config.get('trading_interval', 300)
+        self.auto_execute_suggested_trades = self.config.get('auto_execute_suggested_trades', True)
+        self.min_confidence_threshold = self.config.get('min_confidence_threshold', 0.75)
+        self.suggested_trade_refresh_interval = self.config.get('suggested_trade_refresh_interval', 300)
 
     def load_config(self, config_file: str) -> None:
         """Load configuration from file."""
@@ -51,48 +81,92 @@ class PaperTradingStrategy:
             with open(config_file, 'r') as f:
                 config = json.load(f)
             
-            # Update configuration
-            self.config.update(config)
+            # Validate and update configuration
+            for key, default in self.config.items():
+                if isinstance(default, bool):
+                    self.config[key] = bool(config.get(key, default))
+                elif isinstance(default, float):
+                    self.config[key] = float(config.get(key, default))
+                elif isinstance(default, int):
+                    self.config[key] = int(config.get(key, default))
+                elif isinstance(default, list):
+                    self.config[key] = list(config.get(key, default))
+                else:
+                    self.config[key] = config.get(key, default)
             
-            # Update instance variables from config
-            self.balance = config.get('initial_balance', 10000.0)
-            self.symbols = config.get('symbols', [])
-            self.trading_interval = config.get('trading_interval', 300)
+            # Update instance variables
+            self.update_config_from_dict(self.config)
             
             logger.info(f"Loaded configuration from {config_file}")
         except Exception as e:
             logger.error(f"Error loading configuration: {str(e)}")
+            raise
 
-    def save_config(self, config_file: str = None) -> None:
+    def save_config(self) -> None:
         """Save current configuration to file."""
         try:
-            # Use provided config_file or fall back to instance config_file
-            save_file = config_file or getattr(self, 'config_file', None)
-            if not save_file:
+            if not self.config_file:
                 raise ValueError("No config file path provided")
                 
-            os.makedirs(os.path.dirname(save_file), exist_ok=True)
-            with open(save_file, 'w') as f:
+            os.makedirs(os.path.dirname(self.config_file), exist_ok=True)
+            with open(self.config_file, 'w') as f:
                 json.dump(self.config, f, indent=2)
-            logger.info(f"Saved configuration to {save_file}")
+            
+            logger.info(f"Trading configuration saved to {self.config_file}")
         except Exception as e:
             logger.error(f"Error saving configuration: {str(e)}")
             raise
 
-    def update_config(self, config: Dict) -> None:
-        """Update configuration settings."""
+    def update_config_from_dict(self, config: Dict) -> None:
+        """Update configuration from dictionary."""
         self.config.update(config)
         
         # Update instance variables from config
-        self.auto_execute_suggested_trades = self.config.get('auto_execute_suggested_trades', False)
-        self.min_confidence_threshold = self.config.get('min_confidence_threshold', 0.7)
-        self.suggested_trade_refresh_interval = self.config.get('suggested_trade_refresh_interval', 60)
+        self.balance = self.config.get('initial_balance', 10000.0)
+        self.symbols = self.config.get('symbols', [])
+        self.trading_interval = self.config.get('trading_interval', 300)
+        self.auto_execute_suggested_trades = self.config.get('auto_execute_suggested_trades', True)
+        self.min_confidence_threshold = self.config.get('min_confidence_threshold', 0.75)
+        self.suggested_trade_refresh_interval = self.config.get('suggested_trade_refresh_interval', 300)
         
-        logger.info("Configuration updated")
+        logger.info("Configuration updated from dictionary")
 
     def get_config(self) -> Dict:
         """Get current configuration."""
-        return self.config
+        return {
+            'auto_execute_suggested_trades': self.auto_execute_suggested_trades,
+            'min_confidence_threshold': self.min_confidence_threshold,
+            'suggested_trade_refresh_interval': self.suggested_trade_refresh_interval,
+            'initial_balance': self.balance,
+            'trading_interval': self.trading_interval,
+            'symbols': self.symbols,
+            'last_updated': datetime.now().isoformat(),
+            'api_keys_configured': bool(self.config.get('api_key') and self.config.get('api_secret')),
+            'api_keys_valid': self.validate_api_keys()
+        }
+
+    def validate_api_keys(self) -> bool:
+        """Validate API keys format and length."""
+        try:
+            api_key = self.config.get('api_key', '')
+            api_secret = self.config.get('api_secret', '')
+            
+            # Basic validation - API keys should be of certain length and format
+            if not api_key or not api_secret:
+                return False
+                
+            # Validate key length
+            if len(api_key) < 20 or len(api_secret) < 30:
+                return False
+                
+            # Validate format (basic alphanumeric check)
+            if not api_key.isalnum() or not api_secret.isalnum():
+                return False
+                
+            return True
+        except Exception as e:
+            logger.error(f"Error validating API keys: {str(e)}")
+            return False
 
     def save_state(self) -> None:
         """Save current state to file."""
@@ -103,17 +177,29 @@ class PaperTradingStrategy:
             'trade_history': self.trade_history
         }
         
-        # Save to state file
-        state_file = os.path.join(
-            os.path.dirname(os.path.abspath(__file__)),
-            "../../frontend/trading_data/paper_trading_state.json"
-        )
-        
-        os.makedirs(os.path.dirname(state_file), exist_ok=True)
-        with open(state_file, 'w') as f:
-            json.dump(state, f, indent=2)
-        
-        logger.info(f"Trading state saved to {state_file}")
+        state_path = TRADING_DATA_DIR / 'paper_trading_state.json'
+        try:
+            with open(state_path, 'w') as f:
+                json.dump(state, f, indent=4)
+            logger.info(f"Trading state saved to {state_path}")
+        except Exception as e:
+            logger.error(f"Failed to save trading state: {e}")
+
+    def load_state(self) -> None:
+        """Load state from file."""
+        state_path = TRADING_DATA_DIR / 'paper_trading_state.json'
+        try:
+            if state_path.exists():
+                with open(state_path, 'r') as f:
+                    state = json.load(f)
+                self.balance = state.get('balance', self.balance)
+                self.holdings = state.get('holdings', self.holdings)
+                self.last_prices = state.get('last_prices', self.last_prices)
+                self.trade_history = state.get('trade_history', self.trade_history)
+                logger.info(f"Trading state loaded from {state_path}")
+        except Exception as e:
+            logger.error(f"Failed to load trading state: {e}")
+            self.reset_state()
 
     def calculate_portfolio_value(self) -> float:
         """Calculate current portfolio value."""
@@ -160,14 +246,38 @@ class PaperTradingStrategy:
         }
 
     def start(self, interval_seconds: int = 300) -> None:
-        """Start trading with specified interval."""
+        """Start the paper trading strategy."""
+        if self.is_running:
+            logger.warning("Paper trading is already running")
+            return
+            
         self.is_running = True
         self.trading_interval = interval_seconds
-        logger.info(f"Starting paper trading with {len(self.symbols)} symbols")
-        logger.info(f"Trading cycle interval: {self.trading_interval} seconds")
+        logger.info(f"Started paper trading with interval: {interval_seconds} seconds")
         
-        # Start trading cycle
-        self._start_trading_cycle()
+        # Save updated configuration
+        self.save_config()
+
+    def stop(self) -> None:
+        """Stop the paper trading strategy."""
+        if not self.is_running:
+            logger.warning("Paper trading is already stopped")
+            return
+            
+        self.is_running = False
+        logger.info("Stopped paper trading")
+        
+        # Save final state
+        self.save_state()
+
+    def reset(self) -> None:
+        """Reset to initial state."""
+        self.balance = 10000.0
+        self.holdings = {}
+        self.last_prices = {}
+        self.trade_history = []
+        self.is_running = False
+        logger.info("Paper trading reset to initial state")
 
     def _start_trading_cycle(self) -> None:
         """Start the trading cycle."""
@@ -270,17 +380,3 @@ class PaperTradingStrategy:
                 }
                 self.trade_history.append(trade)
                 logger.info(f"SELL {quantity:.4f} {symbol} at {price:.2f} = {proceeds:.4f} USDT")
-
-    def stop(self) -> None:
-        """Stop trading."""
-        self.is_running = False
-        logger.info("Paper trading stopped")
-
-    def reset(self) -> None:
-        """Reset to initial state."""
-        self.balance = 10000.0
-        self.holdings = {}
-        self.last_prices = {}
-        self.trade_history = []
-        self.is_running = False
-        logger.info("Paper trading reset to initial state")

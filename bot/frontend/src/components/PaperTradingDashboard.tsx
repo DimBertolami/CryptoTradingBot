@@ -290,12 +290,13 @@ const PaperTradingDashboard: React.FC<PaperTradingDashboardProps> = ({
       
       if (result.status === 'success') {
         console.log('Command executed successfully:', result.data);
-        // Update local state with new trade (will be replaced when fetchStatus is called)
-        if (command === 'execute_trade' && result.data.trade) {
-          setStatus(prev => ({
-            ...prev,
-            trade_history: [...prev.trade_history, result.data.trade]
-          }));
+        // Don't update local state with trade - wait for fetchStatus to get the updated status
+        // This ensures we have the most accurate data from the backend
+        if (command === 'execute_trade') {
+          // Trigger a status update after a short delay to ensure the backend has processed the trade
+          setTimeout(() => {
+            fetchStatus();
+          }, 1000);
         }
       } else {
         throw new Error(result.message || 'Failed to execute command');

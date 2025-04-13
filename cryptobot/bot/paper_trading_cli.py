@@ -10,7 +10,7 @@ import argparse
 import json
 import time
 from datetime import datetime
-from strategies.paper_trading import PaperTradingStrategy
+from cryptobot.bot.strategies.paper_trading import PaperTradingStrategy
 
 def get_status(strategy):
     """Get and print strategy status."""
