@@ -1,22 +1,13 @@
 #!/bin/bash
 
-# Navigate to backend directory
+# Make sure we're in the correct directory
 cd /opt/lampp/htdocs/bot/backend || exit 1
 
-# Start Flask server in background
-echo "Starting Flask server..."
-python3 app.py &
+# Make sure the script is executable
+chmod +x run_tests.sh
 
-# Wait for server to start
-echo "Waiting for server to start..."
-sleep 2
+# Run the tests
+echo "Starting endpoint tests..."
+./run_tests.sh
 
-# Run tests
-echo "Running status endpoint tests..."
-python3 test_status_endpoints.py
-
-# Stop the server
-echo "Stopping server..."
-pkill -f "python3 app.py"
-
-echo "All tests completed"
+echo "Tests completed"
