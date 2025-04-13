@@ -11,7 +11,6 @@ import time
 import logging
 from datetime import datetime
 from flask import Flask, jsonify, request, Blueprint
-from flask_cors import CORS
 
 # Add parent directory to path for imports
 BASE_DIR = os.path.dirname(os.path.dirname(os.path.abspath(__file__)))
@@ -91,6 +90,69 @@ def update_status_file():
     except Exception as e:
         logger.error(f"Error updating status file: {str(e)}")
 
+@paper_trading_bp.route('/trading/paper/status', methods=['GET'])
+def get_paper_trading_status():
+    """Get current paper trading status."""
+    try:
+        # Get current status
+        status = {
+            "is_running": strategy.is_running,
+            "status": "active" if strategy.is_running else "inactive",
+            "mode": strategy.mode,
+            "balance": strategy.balance,
+            "holdings": strategy.holdings,
+            "last_updated": datetime.now().isoformat()
+        }
+        
+        return jsonify(status)
+    except Exception as e:
+        logger.error(f"Error getting paper trading status: {str(e)}")
+        return jsonify({"error": str(e), "status": "error"})
+
+@paper_trading_bp.route('/trading/paper', methods=['POST'])
+def control_paper_trading():
+    """Control paper trading operations."""
+    try:
+        data = request.json
+        command = data.get("command", "")
+        
+        if command == "start":
+            if not strategy.is_running:
+                strategy.start()
+                update_status_file()
+                return jsonify({"success": True, "status": "active"})
+            else:
+                return jsonify({"success": False, "error": "Paper trading is already running"})
+        elif command == "stop":
+            if strategy.is_running:
+                strategy.stop()
+                update_status_file()
+                return jsonify({"success": True, "status": "inactive"})
+            else:
+                return jsonify({"success": False, "error": "Paper trading is not running"})
+        elif command == "reset":
+            strategy.reset()
+            update_status_file()
+            return jsonify({"success": True, "status": "inactive"})
+        else:
+            return jsonify({"success": False, "error": "Unknown command"})
+    except Exception as e:
+        logger.error(f"Error controlling paper trading: {str(e)}")
+        return jsonify({"success": False, "error": str(e)})
+
+# Define routes
+@paper_trading_bp.route('/trading/paper', methods=['GET'])
+def handle_paper_requests():
+    """Handle all paper trading related requests"""
+    try:
+        return get_status()
+    except Exception as e:
+        logger.error(f"Error handling paper trading request: {str(e)}")
+        return jsonify({
+            'success': False,
+            'message': str(e)
+        }), 500
+
 def get_status():
     """Get the current paper trading status."""
     try:
@@ -137,64 +199,6 @@ def get_status():
         })
     except Exception as e:
         logger.error(f"Error getting status: {str(e)}")
-        return jsonify({
-            'success': False,
-            'message': str(e)
-        }), 500
-
-def handle_command():
-    """Handle commands from frontend"""
-    try:
-        command = request.json.get('command')
-        if command == 'start':
-            if not strategy.is_running:
-                strategy.start()
-                update_status_file()
-                return jsonify({
-                    'success': True,
-                    'message': 'Paper trading started'
-                })
-            else:
-                return jsonify({
-                    'success': False,
-                    'message': 'Paper trading is already running'
-                }), 400
-        elif command == 'stop':
-            if strategy.is_running:
-                strategy.stop()
-                update_status_file()
-                return jsonify({
-                    'success': True,
-                    'message': 'Paper trading stopped'
-                })
-            else:
-                return jsonify({
-                    'success': False,
-                    'message': 'Paper trading is not running'
-                }), 400
-        else:
-            return jsonify({
-                'success': False,
-                'message': 'Unknown command'
-            }), 400
-    except Exception as e:
-        logger.error(f"Error handling command: {str(e)}")
-        return jsonify({
-            'error': 'Failed to execute command',
-            'timestamp': datetime.now().isoformat()
-        }), 500
-
-# Define routes
-@paper_trading_bp.route('/trading/paper', methods=['GET', 'POST'])
-def handle_paper_requests():
-    """Handle all paper trading related requests"""
-    try:
-        if request.method == 'GET':
-            return get_status()
-        else:  # POST request
-            return handle_command()
-    except Exception as e:
-        logger.error(f"Error handling paper trading request: {str(e)}")
         return jsonify({
             'success': False,
             'message': str(e)

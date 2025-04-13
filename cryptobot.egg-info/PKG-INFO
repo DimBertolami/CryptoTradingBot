@@ -39,6 +39,11 @@ Dynamic: requires-dist
 Dynamic: requires-python
 Dynamic: summary
 
+update papertrader is currently accepting our new features!! 
+![image](https://github.com/user-attachments/assets/ca48677e-f451-4b78-bf7c-e4de2eece6c4)
+
+
+
 main dashboard:
 
 ![image](https://github.com/user-attachments/assets/96b15780-0cdb-4645-89be-3ca50c58e557)
@@ -76,3 +81,54 @@ the internals section is where the bot is supposed to explain to me how it makes
 
 and last screenshot i want to share is the dark mode 
 ![image](https://github.com/user-attachments/assets/09ddf29d-f483-46cb-adc8-d63f6acb4afd)
+
+## Development Setup
+
+1. Install system dependencies:
+```bash
+sudo apt-get update
+sudo apt-get install python3 python3-pip npm nodejs
+```
+
+2. Install Python dependencies:
+```bash
+pip3 install -r requirements.txt
+```
+
+3. Install frontend dependencies:
+```bash
+cd bot/frontend
+npm install
+```
+
+4. Start the development environment:
+```bash
+cd bot
+./startup.sh
+```
+
+The system will automatically:
+- Start the backend API server
+- Start the frontend development server
+- Set up proper logging
+- Manage process IDs
+- Handle health checks and retries
+
+## Testing
+
+To run the test suite:
+```bash
+pip3 install pytest pytest-cov
+python3 -m pytest tests/ -v --cov=bot
+```
+
+## Project Structure
+
+```
+binary/
+├── bot/
+│   ├── backend/          # Backend API and services
+│   ├── frontend/         # React frontend application
+│   ├── scripts/          # Utility scripts
+│   └── tests/            # Test files
+└── requirements.txt      # Python dependencies
