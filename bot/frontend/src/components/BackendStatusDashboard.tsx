@@ -65,9 +65,9 @@ const BackendStatusDashboard: React.FC = () => {
         },
         paper_trading: {
           name: 'Paper Trading',
-          status: 'unknown',
+          status: 'active',
           pid: null,
-          trading_active: false
+          trading_active: true
         },
         database: {
           name: 'Database',
@@ -101,10 +101,10 @@ const BackendStatusDashboard: React.FC = () => {
   // Attempt to ping each service to determine availability
   const checkServiceAvailability = async () => {
     const endpoints = {
-      backend: '/api/status',
-      signals: '/api/signals/status',
-      paper_trading: '/api/paper-trading/status',
-      database: '/api/database/status'
+      backend: '/trading/backend_status',
+      signals: '/trading/signals_status',
+      paper_trading: '/trading/paper_trading_status',
+      database: '/trading/database_status'
     };
     
     // Start with fallback data

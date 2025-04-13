@@ -82,10 +82,10 @@ const DEFAULT_STATUS: PaperTradingStatus = {
   suggested_trade_refresh_interval: 60
 };
 
-const PaperTradingDashboard: React.FC<PaperTradingDashboardProps> = ({ 
-  selectedPeriod = '1m',
-  autoExecuteEnabled: propAutoExecuteEnabled,
-  onAutoExecuteChange
+const PaperTradingDashboard: React.FC<PaperTradingDashboardProps> = ({
+  selectedPeriod = '1d',
+  autoExecuteEnabled: propAutoExecuteEnabled = true,
+  onAutoExecuteChange = () => {}
 }) => {
   const [status, setStatus] = useState<PaperTradingStatus>(DEFAULT_STATUS);
   const [error, setError] = useState<string | null>(null);
@@ -102,7 +102,7 @@ const PaperTradingDashboard: React.FC<PaperTradingDashboardProps> = ({
   const [highlightedTradeId, setHighlightedTradeId] = useState<number | null>(null);
   
   // Auto-execution settings
-  const [autoExecuteEnabled, setAutoExecuteEnabled] = useState<boolean>(propAutoExecuteEnabled ?? false);
+  const [autoExecuteEnabled, setAutoExecuteEnabled] = useState<boolean>(propAutoExecuteEnabled);
   const [confidenceThreshold, setConfidenceThreshold] = useState<number>(0.75);
   // Using the main dashboard's interval instead of a separate setting
 
@@ -227,7 +227,13 @@ const PaperTradingDashboard: React.FC<PaperTradingDashboardProps> = ({
       setError(null);
       
       // Use API endpoint to get real data
-      const response = await fetch('http://localhost:5001/trading/paper');
+      const response = await fetch('/trading/paper', {
+        method: 'GET',
+        headers: {
+          'Content-Type': 'application/json',
+        },
+      });
+      
       if (!response.ok) {
         throw new Error(`Server responded with ${response.status}: ${response.statusText}`);
       }
@@ -246,196 +252,64 @@ const PaperTradingDashboard: React.FC<PaperTradingDashboardProps> = ({
           result.data.trade_history = [];
         }
         
-        // Try to fetch trade history from all possible sources as the 3D visualization
-        const possiblePaths = [
-          '/trading_data/paper_trading_status.json',
-          '/frontend/trading_data/paper_trading_status.json',
-          '/frontend/public/trading_data/paper_trading_status.json',
-          '/frontend/dist/trading_data/paper_trading_status.json'
-        ];
-        
-        // Try each possible path to find visualization data
-        for (const path of possiblePaths) {
-          try {
-            console.log(`Trying to fetch trade data from: ${path}`);
-            const visualizationDataResponse = await fetch(path);
-            if (visualizationDataResponse.ok) {
-              const visualizationData = await visualizationDataResponse.json();
-              console.log(`Fetched visualization data from ${path}:`, visualizationData);
-              
-              // If the visualization data has trade history and our current data doesn't, use it
-              if (visualizationData.trade_history && visualizationData.trade_history.length > 0) {
-                console.log(`Found ${visualizationData.trade_history.length} trades in visualization data`);
-                if (result.data.trade_history.length === 0) {
-                  console.log('Using trade history from visualization data');
-                  result.data.trade_history = visualizationData.trade_history;
-                } else {
-                  console.log('Merging trade histories from both sources');
-                  // Merge trade histories, avoiding duplicates by checking timestamps
-                  const existingTimestamps = new Set(result.data.trade_history.map((t: TradeHistoryItem) => t.timestamp));
-                  const newTrades = visualizationData.trade_history.filter((t: TradeHistoryItem) => !existingTimestamps.has(t.timestamp));
-                  result.data.trade_history = [...result.data.trade_history, ...newTrades];
-                }
-                
-                // Break after finding valid data
-                break;
-              }
-            }
-          } catch (visualizationError) {
-            console.warn(`Could not fetch visualization data from ${path}:`, visualizationError);
-          }
-        }
-        
-        // If we still don't have any trade history data, use fallback data
-        if (result.data.trade_history.length === 0) {
-          console.log('No trade history found in any source, using fallback data');
-          result.data.trade_history = generateFallbackTradeData(20);
-          
-          // Update holdings based on fallback trades
-          const holdings: Record<string, number> = {};
-          const lastPrices: Record<string, number> = {};
-          
-          result.data.trade_history.forEach((trade: TradeHistoryItem) => {
-            // Update holdings
-            if (!holdings[trade.symbol]) {
-              holdings[trade.symbol] = 0;
-            }
-            
-            if (trade.side === 'BUY') {
-              holdings[trade.symbol] += trade.quantity;
-            } else if (trade.side === 'SELL') {
-              holdings[trade.symbol] = Math.max(0, holdings[trade.symbol] - trade.quantity);
-            }
-            
-            // Update last prices
-            lastPrices[trade.symbol] = trade.price;
-          });
-          
-          // Update the result data with our generated holdings and prices
-          result.data.holdings = holdings;
-          result.data.last_prices = lastPrices;
-          
-          // Update balance to match the last trade's balance_after
-          if (result.data.trade_history.length > 0) {
-            const lastTrade = result.data.trade_history[result.data.trade_history.length - 1];
-            result.data.balance = lastTrade.balance_after;
-          }
-        }
-        
-        // Update performance metrics if they don't exist
-        if (!result.data.performance) {
-          result.data.performance = {
-            total_trades: result.data.trade_history.length,
-            profit_loss: 0,
-            return_pct: 0,
-            win_rate: 0,
-            sharpe_ratio: 0,
-            max_drawdown: 0
-          };
-        } else if (result.data.performance.total_trades === undefined) {
-          // Make sure total_trades is set based on trade history length
-          result.data.performance.total_trades = result.data.trade_history.length;
-        }
-        
-        // Always update total_trades to match trade history length
-        if (result.data.performance) {
-          result.data.performance.total_trades = result.data.trade_history.length;
-        }
-        
-        // Update status with the data from the API
+        // Update status with the new data
         setStatus(result.data);
       } else {
         throw new Error(result.message || 'Failed to fetch trading status');
       }
     } catch (err) {
       console.error('Error fetching trading status:', err);
-      setError(`Failed to fetch trading status: ${err instanceof Error ? err.message : String(err)}`);
+      setError(err instanceof Error ? err.message : 'Failed to fetch trading status');
     } finally {
       setIsLoading(false);
     }
   }, []);
 
-  // Send command to the trading API
-  const sendCommand = async (command: string, params: Record<string, string | number | boolean> = {}) => {
-    console.log(`Sending command: ${command} with params:`, params);
+  // Send command to backend
+  const sendCommand = useCallback(async (command: string, params: any = {}) => {
     try {
       setIsLoading(true);
       setError(null);
       
-      // Convert all parameters to strings for consistency
-      const stringParams: Record<string, string> = {};
-      Object.entries(params).forEach(([key, value]) => {
-        if (typeof value === 'boolean') {
-          stringParams[key] = value ? 'true' : 'false';
-        } else {
-          stringParams[key] = String(value);
-        }
-      });
-      
-      console.log(`Sending command with stringified params:`, stringParams);
-      
-      const response = await fetch('http://localhost:5001/trading/paper', {
+      const response = await fetch('/trading/paper', {
         method: 'POST',
         headers: {
           'Content-Type': 'application/json',
         },
         body: JSON.stringify({
           command,
-          ...stringParams
-        }),
+          params
+        })
       });
       
-      console.log(`Response status:`, response.status, response.statusText);
-      
       if (!response.ok) {
-        // Try to get more detailed error information
-        let errorMessage = `Server responded with ${response.status}: ${response.statusText}`;
-        try {
-          const errorText = await response.text();
-          console.error('Error response body:', errorText);
-          if (errorText) {
-            // Try to parse as JSON, but fall back to using raw text
-            const isJson = errorText.startsWith('{') && errorText.endsWith('}');
-            if (isJson) {
-              try {
-                const errorJson = JSON.parse(errorText);
-                if (errorJson.message) {
-                  errorMessage = errorJson.message;
-                }
-              } catch {
-                // JSON parsing failed, use the raw text
-                errorMessage = `${errorMessage}\nDetails: ${errorText}`;
-              }
-            } else {
-              // Not JSON, use the raw text
-              errorMessage = `${errorMessage}\nDetails: ${errorText}`;
-            }
-          }
-        } catch (e) {
-          console.error('Failed to read error response:', e);
-        }
-        throw new Error(errorMessage);
+        throw new Error(`Server responded with ${response.status}: ${response.statusText}`);
       }
       
       const result = await response.json();
-      console.log(`Command result:`, result);
       
-      if (result.status !== 'success') {
-        throw new Error(result.message || `Failed to execute command: ${command}`);
+      if (result.status === 'success') {
+        console.log('Command executed successfully:', result.data);
+        // Update local state with new trade (will be replaced when fetchStatus is called)
+        if (command === 'execute_trade' && result.data.trade) {
+          setStatus(prev => ({
+            ...prev,
+            trade_history: [...prev.trade_history, result.data.trade]
+          }));
+        }
+      } else {
+        throw new Error(result.message || 'Failed to execute command');
       }
       
       // Refresh status after command execution
       await fetchStatus();
-      
-      return result;
     } catch (err) {
-      console.error(`Error executing command ${command}:`, err);
-      setError(`Failed to execute command: ${err instanceof Error ? err.message : String(err)}`);
-      throw err;
+      console.error('Error executing command:', err);
+      setError(err instanceof Error ? err.message : 'Failed to execute command');
     } finally {
       setIsLoading(false);
     }
-  };
+  }, [fetchStatus]);
   
   // Format currency with symbol
   const formatCurrency = (value: number, currency?: string): string => {
@@ -1136,7 +1010,7 @@ const PaperTradingDashboard: React.FC<PaperTradingDashboardProps> = ({
                     
                     // Find the average purchase price from BUY trades for this symbol
                     const buyTrades = (status.trade_history || []).filter(trade => 
-                      trade.symbol === symbol && trade.side === 'BUY'
+                      trade.symbol === symbol && trade.side === 'BUY' && new Date(trade.timestamp) < new Date()
                     );
                     
                     if (buyTrades.length > 0) {
