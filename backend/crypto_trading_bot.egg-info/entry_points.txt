@@ -1,0 +1,2 @@
+[console_scripts]
+crypto-bot = app.main:main

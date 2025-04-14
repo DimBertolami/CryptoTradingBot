@@ -1,35 +1,82 @@
 #!/bin/bash
 
-# Set up virtual environment
-echo "Setting up virtual environment..."
-python3 -m venv venv2
-source venv2/bin/activate
+# Exit on error
+set -e
 
-# Install pip if needed
-if ! command -v pip3 &> /dev/null; then
-    echo "Installing pip..."
-    curl https://bootstrap.pypa.io/get-pip.py -o get-pip.py
-    python3 get-pip.py
-fi
+# Colors for output
+RED="\033[0;31m"
+GREEN="\033[0;32m"
+YELLOW="\033[0;33m"
+BLUE="\033[0;34m"
+NC="\033[0m" # No Color
 
-# Install project dependencies
-echo "Installing dependencies..."
-pip install --upgrade pip
-pip install -e .
+# Function to print colored messages
+print_status() {
+    echo -e "${BLUE}[*] $1${NC}"
+}
 
-# Install development tools
-pip install -e .[dev]
+print_success() {
+    echo -e "${GREEN}[+] $1${NC}"
+}
 
-# Install test dependencies
-pip install pytest pytest-asyncio
+print_error() {
+    echo -e "${RED}[-] $1${NC}"
+}
 
-# Set up Python path
-export PYTHONPATH=$PYTHONPATH:$(pwd)
+print_warning() {
+    echo -e "${YELLOW}[!] $1${NC}"
+}
 
-# Run tests
-echo "Running tests..."
-python3 -m pytest tests/ -v
+# Function to start services
+start_services() {
+    print_status "Starting services..."
+    
+    # Kill any existing processes
+    pkill -f "uvicorn" || true
+    pkill -f "vite" || true
+    
+    # Start backend
+    print_status "Starting backend service..."
+    cd backend && /opt/lampp/htdocs/venv/bin/uvicorn app.main:app --host 0.0.0.0 --port 8000 &
+    
+    # Start frontend
+    print_status "Starting frontend service..."
+    cd frontend && npm run build && npm run preview -- --port 3000 &
+    
+    print_success "Services started successfully"
+}
 
-# Start the bot
-echo "Starting the bot..."
-python3 -m cryptobot
+# Function to check service status
+check_status() {
+    print_status "Checking service status..."
+    
+    # Wait for services to start
+    sleep 5
+    
+    # Check backend
+    if ! curl -s http://localhost:8000/health | grep -q '"status":"healthy"'; then
+        print_error "Backend service failed to start"
+        exit 1
+    fi
+    
+    # Check frontend
+    if ! curl -s http://localhost:3000 | grep -q "CryptoTradingBot"; then
+        print_error "Frontend service failed to start"
+        exit 1
+    fi
+    
+    print_success "All services are running"
+}
+
+# Main startup process
+print_status "Starting CryptoTradingBot..."
+
+# Start services
+start_services
+
+# Check status
+check_status
+
+print_success "CryptoTradingBot started successfully!"
+print_status "Backend: http://localhost:8000"
+print_status "Frontend: http://localhost:3000"

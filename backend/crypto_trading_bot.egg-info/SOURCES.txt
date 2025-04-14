@@ -1,0 +1,7 @@
+setup.py
+crypto_trading_bot.egg-info/PKG-INFO
+crypto_trading_bot.egg-info/SOURCES.txt
+crypto_trading_bot.egg-info/dependency_links.txt
+crypto_trading_bot.egg-info/entry_points.txt
+crypto_trading_bot.egg-info/requires.txt
+crypto_trading_bot.egg-info/top_level.txt

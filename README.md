@@ -1,43 +1,92 @@
-update papertrader is currently accepting our new features!! 
-![image](https://github.com/user-attachments/assets/ca48677e-f451-4b78-bf7c-e4de2eece6c4)
+# Crypto Trading Bot v2
 
+A modern cryptocurrency trading bot built with TypeScript, FastAPI, and comprehensive risk management.
 
+## Project Structure
 
-main dashboard:
+```
+├── backend/              # FastAPI backend service
+│   ├── app/             # Main application code
+│   ├── tests/           # Backend tests
+│   └── requirements.txt # Python dependencies
+├── frontend/            # React + TypeScript frontend
+│   ├── src/            # Source code
+│   ├── tests/          # Frontend tests
+│   └── package.json    # Frontend dependencies
+├── scripts/            # Utility scripts
+│   ├── startup.sh      # Start all services
+│   └── shutdown.sh     # Clean shutdown
+└── docs/              # Documentation
+```
 
-![image](https://github.com/user-attachments/assets/96b15780-0cdb-4645-89be-3ca50c58e557)
+## Setup
 
-![image](https://github.com/user-attachments/assets/516f579e-58c2-4c53-8581-492b223d2e29)
+### Prerequisites
+- Python 3.11+
+- Node.js 18+
+- npm 9+
 
-![image](https://github.com/user-attachments/assets/dd95704c-0cd6-45d1-b2e1-9bb4a29bf8e5)
+### Installation
 
+1. Clone the repository:
+```bash
+git clone https://github.com/DimBertolami/CryptoTradingBot-v2.git
+cd CryptoTradingBot-v2
+```
 
+2. Install backend dependencies:
+```bash
+cd backend
+python -m venv venv
+source venv/bin/activate  # On Windows: venv\Scripts\activate
+pip install -r requirements.txt
+```
 
-under my assets: 
+3. Install frontend dependencies:
+```bash
+cd ../frontend
+npm install
+```
 
-![image](https://github.com/user-attachments/assets/a31d2f4c-d66f-4c16-9b6c-3c26ab9aac69)
+4. Start the services:
+```bash
+./scripts/startup.sh
+```
 
-![image](https://github.com/user-attachments/assets/867bc31f-3641-4fac-8f0e-3f17bd73ad74)
+## Development
 
-![image](https://github.com/user-attachments/assets/8d453282-b00b-46b7-ae83-146e5230c592)
+### Backend Development
+```bash
+cd backend
+source venv/bin/activate
+uvicorn app.main:app --reload
+```
 
-![image](https://github.com/user-attachments/assets/7ffc3642-9666-429e-bbd0-f54ac5370328)
+### Frontend Development
+```bash
+cd frontend
+npm run dev
+```
 
-trading strategy:
-![image](https://github.com/user-attachments/assets/2e680d0e-f873-467a-8003-3bd7354270c1)
+## Testing
 
-paper trading, which can easily be configured for realtime trading. 
-Just add your api key and secret and the bot is ready to play with the big boys, and will give them a run for their money also. 
+### Backend Tests
+```bash
+cd backend
+pytest
+```
 
-![image](https://github.com/user-attachments/assets/d2807478-c554-4dcf-8c62-ab45aaf5efa8)
+### Frontend Tests
+```bash
+cd frontend
+npm test
+```
 
-![image](https://github.com/user-attachments/assets/118e790b-b6a1-4986-bcf6-10a5b431fd5a)
+## Contributing
 
-the internals section is where the bot is supposed to explain to me how it makes his decisions, and evaluates his own performance, so that he can make adjustments to his strategy. Still alot of work to do, but it's getting there
-![image](https://github.com/user-attachments/assets/f27b7985-64bb-48b6-ae5d-83fbfa94d999)
-![image](https://github.com/user-attachments/assets/9a768dfc-c860-4f48-89bc-f4302ebc670e)
-![image](https://github.com/user-attachments/assets/c2422114-a17b-4d8a-ae36-ae709cab80c3)
+Please read CONTRIBUTING.md for details on our code of conduct and the process for submitting pull requests.
 
+<<<<<<< Updated upstream
 and last screenshot i want to share is the dark mode 
 ![image](https://github.com/user-attachments/assets/09ddf29d-f483-46cb-adc8-d63f6acb4afd)
 
@@ -91,3 +140,8 @@ binary/
 │   ├── scripts/          # Utility scripts
 │   └── tests/            # Test files
 └── requirements.txt      # Python dependencies
+=======
+## License
+
+This project is licensed under the MIT License - see the LICENSE file for details.
+>>>>>>> Stashed changes
