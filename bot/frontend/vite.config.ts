@@ -33,6 +33,11 @@ export default defineConfig({
         target: 'http://localhost:5001',
         changeOrigin: true,
         secure: false
+      },
+      '/logs': {
+        target: 'http://localhost:5173',
+        changeOrigin: true,
+        secure: false
       }
     }
   },

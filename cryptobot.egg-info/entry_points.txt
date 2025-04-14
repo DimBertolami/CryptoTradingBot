@@ -1,2 +1,0 @@
-[console_scripts]
-cryptobot = cryptobot.cli:main
