@@ -1,0 +1,10 @@
+Metadata-Version: 2.1
+Name: crypto-trading-bot
+Version: 0.1.0
+Summary: Crypto Trading Bot Backend
+Home-page: https://github.com/DimBertolami/CryptoTradingBot
+Author: Dim Bertolami
+Classifier: Programming Language :: Python :: 3
+Classifier: License :: OSI Approved :: MIT License
+Classifier: Operating System :: OS Independent
+Requires-Python: >=3.8
