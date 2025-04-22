@@ -45,36 +45,36 @@ const initialCryptoData: CryptoData[] = [
   {
     name: 'Bitcoin',
     symbol: 'BTC',
-    icon: <img src="https://cryptologos.cc/logos/bitcoin-btc-logo.png" alt="BTC" className="w-5 h-5" />,
+    icon: <img src="/images/crypto/btc-logo.png" alt="BTC" className="w-5 h-5" />,
     amount: '0',
     value: '$0.00',
     profit: '+0.0%',
     prediction: 'Neutral',
-    imageUrl: 'https://cryptologos.cc/logos/bitcoin-btc-logo.png',
+    imageUrl: '/images/crypto/btc-logo.png',
     price: 0,
     price_change_24h_percentage: 0
   },
   {
     name: 'Ethereum',
     symbol: 'ETH',
-    icon: <img src="https://cryptologos.cc/logos/ethereum-eth-logo.png" alt="ETH" className="w-5 h-5" />,
+    icon: <img src="/images/crypto/eth-logo.png" alt="ETH" className="w-5 h-5" />,
     amount: '0',
     value: '$0.00',
     profit: '+0.0%',
     prediction: 'Neutral',
-    imageUrl: 'https://cryptologos.cc/logos/ethereum-eth-logo.png',
+    imageUrl: '/images/crypto/eth-logo.png',
     price: 0,
     price_change_24h_percentage: 0
   },
   {
     name: 'Gemini',
     symbol: 'GEM',
-    icon: <img src="https://cryptologos.cc/logos/gemini-gem-logo.png" alt="GEM" className="w-5 h-5" />,
+    icon: <img src="/images/crypto/gem-logo.png" alt="GEM" className="w-5 h-5" />,
     amount: '0',
     value: '$0.00',
     profit: '+0.0%',
     prediction: 'Neutral',
-    imageUrl: 'https://cryptologos.cc/logos/gemini-gem-logo.png',
+    imageUrl: '/images/crypto/gem-logo.png',
     price: 0,
     price_change_24h_percentage: 0
   }

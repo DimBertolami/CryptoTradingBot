@@ -75,35 +75,35 @@ const AssetManagement: React.FC<AssetManagementProps> = ({
 
   // Popular cryptocurrencies
   const popularCryptos = useMemo(() => [
-    { name: 'Bitcoin', symbol: 'BTC', image: 'https://cryptologos.cc/logos/bitcoin-btc-logo.png' },
-    { name: 'Ethereum', symbol: 'ETH', image: 'https://cryptologos.cc/logos/ethereum-eth-logo.png' },
-    { name: 'Solana', symbol: 'SOL', image: 'https://cryptologos.cc/logos/solana-sol-logo.png' },
-    { name: 'Cardano', symbol: 'ADA', image: 'https://cryptologos.cc/logos/cardano-ada-logo.png' },
-    { name: 'Ripple', symbol: 'XRP', image: 'https://cryptologos.cc/logos/xrp-xrp-logo.png' },
-    { name: 'Polkadot', symbol: 'DOT', image: 'https://cryptologos.cc/logos/polkadot-new-dot-logo.png' },
-    { name: 'Avalanche', symbol: 'AVAX', image: 'https://cryptologos.cc/logos/avalanche-avax-logo.png' },
-    { name: 'Dogecoin', symbol: 'DOGE', image: 'https://cryptologos.cc/logos/dogecoin-doge-logo.png' },
-    { name: 'Shiba Inu', symbol: 'SHIB', image: 'https://cryptologos.cc/logos/shiba-inu-shib-logo.png' },
-    { name: 'Polygon', symbol: 'MATIC', image: 'https://cryptologos.cc/logos/polygon-matic-logo.png' },
+    { name: 'Bitcoin', symbol: 'BTC', image: '/images/crypto/btc-logo.png' },
+    { name: 'Ethereum', symbol: 'ETH', image: '/images/crypto/eth-logo.png' },
+    { name: 'Solana', symbol: 'SOL', image: '/images/crypto/sol-logo.png' },
+    { name: 'Cardano', symbol: 'ADA', image: '/images/crypto/ada-logo.png' },
+    { name: 'Ripple', symbol: 'XRP', image: '/images/crypto/xrp-logo.png' },
+    { name: 'Polkadot', symbol: 'DOT', image: '/images/crypto/dot-logo.png' },
+    { name: 'Avalanche', symbol: 'AVAX', image: '/images/crypto/avax-logo.png' },
+    { name: 'Dogecoin', symbol: 'DOGE', image: '/images/crypto/doge-logo.png' },
+    { name: 'Shiba Inu', symbol: 'SHIB', image: '/images/crypto/shib-logo.png' },
+    { name: 'Polygon', symbol: 'MATIC', image: '/images/crypto/matic-logo.png' },
   ] as CryptoCurrency[], []);
 
   // List of all cryptocurrencies including suspicious ones
   const allCryptocurrencies = useMemo(() => [
     // Legitimate cryptocurrencies
     ...popularCryptos,
-    { name: 'Chainlink', symbol: 'LINK', image: 'https://cryptologos.cc/logos/chainlink-link-logo.png' },
-    { name: 'Uniswap', symbol: 'UNI', image: 'https://cryptologos.cc/logos/uniswap-uni-logo.png' },
-    { name: 'Litecoin', symbol: 'LTC', image: 'https://cryptologos.cc/logos/litecoin-ltc-logo.png' },
-    { name: 'Stellar', symbol: 'XLM', image: 'https://cryptologos.cc/logos/stellar-xlm-logo.png' },
-    { name: 'Cosmos', symbol: 'ATOM', image: 'https://cryptologos.cc/logos/cosmos-atom-logo.png' },
-    { name: 'Algorand', symbol: 'ALGO', image: 'https://cryptologos.cc/logos/algorand-algo-logo.png' },
-    { name: 'Tezos', symbol: 'XTZ', image: 'https://cryptologos.cc/logos/tezos-xtz-logo.png' },
+    { name: 'Chainlink', symbol: 'LINK', image: '/images/crypto/link-logo.png' },
+    { name: 'Uniswap', symbol: 'UNI', image: '/images/crypto/uni-logo.png' },
+    { name: 'Litecoin', symbol: 'LTC', image: '/images/crypto/ltc-logo.png' },
+    { name: 'Stellar', symbol: 'XLM', image: '/images/crypto/xlm-logo.png' },
+    { name: 'Cosmos', symbol: 'ATOM', image: '/images/crypto/atom-logo.png' },
+    { name: 'Algorand', symbol: 'ALGO', image: '/images/crypto/algo-logo.png' },
+    { name: 'Tezos', symbol: 'XTZ', image: '/images/crypto/xtz-logo.png' },
     
     // Suspicious cryptocurrencies with detailed warnings
     { 
       name: 'SafeMoon', 
       symbol: 'SAFEMOON', 
-      image: 'https://cryptologos.cc/logos/safemoon-safemoon-logo.png',
+      image: '/images/crypto/safemoon-logo.png',
       isSuspicious: true,
       warning: "This token has a high risk of being a scam. It features:\n- High transfer fees\n- Burn mechanism that can be manipulated\n- No verifiable team members\n- Multiple reported incidents of rug pulls"
     },
