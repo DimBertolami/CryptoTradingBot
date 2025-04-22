@@ -29,6 +29,7 @@ interface BackendStatus {
     signals: LogStatus;
     paper_trading: LogStatus;
   };
+  error?: string;
 }
 
 const BackendStatusDashboard: React.FC = () => {
@@ -38,7 +39,7 @@ const BackendStatusDashboard: React.FC = () => {
   const [expanded, setExpanded] = useState<boolean>(false);
   const [lastUpdated, setLastUpdated] = useState<Date | null>(null);
   const [autoRefresh, setAutoRefresh] = useState<boolean>(true);
-  const [resolvingService, setResolvingService] = useState<string | null>(null);
+
   const [resolvingAll, setResolvingAll] = useState<boolean>(false);
   
   // Fallback status data for when the backend is unreachable
@@ -100,30 +101,40 @@ const BackendStatusDashboard: React.FC = () => {
   
   // Attempt to ping each service to determine availability
   const checkServiceAvailability = useCallback(async () => {
+    const endpoints = {
+      backend: '/trading/backend_status',
+      signals: '/trading/signals_status',
+      paper_trading: '/trading/paper_trading_status',
+      database: '/trading/database_status'
+    };
+    
     try {
-      // Check backend status
-      const backendResponse = await fetch('/trading/paper');
-      const backendStatus = await backendResponse.json();
-      
-      // Check signals service
-      const signalsResponse = await fetch('/trading/paper?command=check_signals');
-      const signalsStatus = await signalsResponse.json();
-      
-      // Check paper trading status
-      const paperTradingResponse = await fetch('/trading/paper?command=check_paper_trading');
-      const paperTradingStatus = await paperTradingResponse.json();
-      
-      // Check database status
-      const databaseResponse = await fetch('/trading/paper?command=check_database');
-      const databaseStatus = await databaseResponse.json();
-      
+      // Start with fallback data
       const currentStatus = generateFallbackStatus();
       currentStatus.timestamp = new Date().toISOString();
       
-      (currentStatus.services as Record<string, ServiceStatus>).backend.status = backendStatus.success ? 'active' : 'inactive';
-      (currentStatus.services as Record<string, ServiceStatus>).signals.status = signalsStatus.success ? 'active' : 'inactive';
-      (currentStatus.services as Record<string, ServiceStatus>).paper_trading.status = paperTradingStatus.success ? 'active' : 'inactive';
-      (currentStatus.services as Record<string, ServiceStatus>).database.status = databaseStatus.success ? 'active' : 'inactive';
+      // Check each service endpoint
+      for (const [service, endpoint] of Object.entries(endpoints)) {
+        try {
+          const controller = new AbortController();
+          const timeoutId = setTimeout(() => controller.abort(), 2000);
+          const response = await fetch(endpoint, { method: 'GET', signal: controller.signal });
+          clearTimeout(timeoutId);
+          
+          if (response.ok) {
+            const data = await response.json();
+            // Use Record type to avoid eslint warnings
+            (currentStatus.services as Record<string, ServiceStatus>)[service].status = data.success ? 'active' : 'inactive';
+            if (data.pid) (currentStatus.services as Record<string, ServiceStatus>)[service].pid = data.pid;
+            if (service === 'paper_trading' && data.trading_active !== undefined) {
+              (currentStatus.services as Record<string, ServiceStatus>)[service].trading_active = data.trading_active;
+            }
+          }
+        } catch (err) {
+          console.log(`Service ${service} check failed:`, err);
+          (currentStatus.services as Record<string, ServiceStatus>)[service].status = 'unreachable';
+        }
+      }
       
       return currentStatus;
     } catch (err) {
@@ -549,9 +560,9 @@ const BackendStatusDashboard: React.FC = () => {
                         e.stopPropagation();
                         resolveService(key);
                       }}
-                      disabled={resolvingService === key || resolvingAll}
+                      disabled={resolvingAll}
                     >
-                      {resolvingService === key ? (
+                      {resolvingAll ? (
                         <span className="spinner-small"></span>
                       ) : (
                         'Resolve'

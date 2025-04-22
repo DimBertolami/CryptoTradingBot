@@ -11,6 +11,38 @@ NC='\033[0m' # No Color
 SCRIPT_DIR=$(dirname "$(readlink -f "$0")")
 cd "$SCRIPT_DIR" || exit 1
 
+<<<<<<< HEAD
+# Try to kill specific PIDs if they were saved
+BACKEND_PID=20997
+FRONTEND_PID=21157
+
+# Try to kill backend by PID first
+if [ ! -z "20997" ] && kill 20997 2>/dev/null; then
+    echo -e "${GREEN}✓ Backend server stopped${NC}"
+else
+    echo -e "${YELLOW}Searching for backend server process...${NC}"
+    FOUND_PIDS=$(lsof -t -i:5001 2>/dev/null)
+    if [ ! -z "$FOUND_PIDS" ]; then
+        echo -e "${YELLOW}Found backend processes: $FOUND_PIDS${NC}"
+        kill $FOUND_PIDS 2>/dev/null
+        echo -e "${GREEN}✓ Backend server(s) stopped${NC}"
+    else
+        echo -e "${RED}No backend server found running on port 5001${NC}"
+    fi
+fi
+
+# Try to kill frontend by PID first
+if [ ! -z "21157" ] && kill 21157 2>/dev/null; then
+    echo -e "${GREEN}✓ Frontend server stopped${NC}"
+else
+    echo -e "${YELLOW}Searching for frontend server processes...${NC}"
+    for PORT in 5173 5174 5175 5176 5177 5178 5179 5180; do
+        FOUND_PIDS=$(lsof -t -i:$PORT 2>/dev/null)
+        if [ ! -z "$FOUND_PIDS" ]; then
+            echo -e "${YELLOW}Found frontend on port $PORT: $FOUND_PIDS${NC}"
+            kill $FOUND_PIDS 2>/dev/null
+            echo -e "${GREEN}✓ Frontend server on port $PORT stopped${NC}"
+=======
 # Define base directories
 BOT_DIR="$SCRIPT_DIR"
 FRONTEND_DIR="$BOT_DIR/frontend"
@@ -31,6 +63,7 @@ stop_service() {
         else
             echo -e "${RED}Warning: $service_name PID file exists but process is not running${NC}"
             rm -f "$pid_file"
+>>>>>>> main
         fi
     else
         echo -e "${YELLOW}$service_name PID file not found${NC}"

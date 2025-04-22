@@ -10,7 +10,7 @@ import json
 import time
 import logging
 from datetime import datetime
-from flask import Flask, jsonify, request, Blueprint
+from flask import Flask, request, jsonify, Blueprint
 from flask_cors import CORS
 
 # Add parent directory to path for imports
@@ -64,21 +64,21 @@ def update_status_file():
     
     try:
         status = {
-            'is_running': strategy.is_running,
-            'mode': strategy.mode,
-            'balance': strategy.balance,
-            'holdings': strategy.holdings,
-            'base_currency': strategy.base_currency,
-            'portfolio_value': strategy.calculate_portfolio_value(),
-            'performance': strategy.calculate_performance_metrics(),
-            'trade_history': strategy.trade_history,
-            'last_prices': strategy.last_prices,
+            'is_running': getattr(strategy, 'is_running', False),
+            'mode': getattr(strategy, 'mode', 'paper'),
+            'balance': getattr(strategy, 'balance', 0.0),
+            'holdings': getattr(strategy, 'holdings', {}),
+            'base_currency': getattr(strategy, 'base_currency', 'USDT'),
+            'portfolio_value': getattr(strategy, 'portfolio_value', 0.0),
+            'performance': getattr(strategy, 'performance', {}),
+            'trade_history': getattr(strategy, 'trade_history', []),
+            'last_prices': getattr(strategy, 'last_prices', {}),
             'last_updated': datetime.now().isoformat(),
             'api_keys_configured': bool(strategy.config.get('api_key') and strategy.config.get('api_secret')),
-            'api_keys_valid': strategy.validate_api_keys(),
-            'auto_execute_suggested_trades': strategy.auto_execute_suggested_trades,
-            'min_confidence_threshold': strategy.min_confidence_threshold,
-            'suggested_trade_refresh_interval': strategy.suggested_trade_refresh_interval
+            'api_keys_valid': getattr(strategy, 'validate_api_keys', lambda: False)(),
+            'auto_execute_suggested_trades': getattr(strategy, 'auto_execute_suggested_trades', False),
+            'min_confidence_threshold': getattr(strategy, 'min_confidence_threshold', 0.75),
+            'suggested_trade_refresh_interval': getattr(strategy, 'suggested_trade_refresh_interval', 60)
         }
         
         os.makedirs(os.path.dirname(status_file), exist_ok=True)
@@ -91,6 +91,62 @@ def update_status_file():
     except Exception as e:
         logger.error(f"Error updating status file: {str(e)}")
 
+<<<<<<< HEAD
+
+@paper_trading_bp.route('/paper', methods=['GET', 'POST'])
+def handle_paper_trading():
+    try:
+        if request.method == 'POST':
+            try:
+                data = request.get_json()
+                if not data:
+                    return jsonify({'success': False, 'message': 'Invalid JSON data'}), 400
+                    
+                command = data.get('command')
+                params = data.get('params', {})
+                
+                if not command:
+                    return jsonify({'success': False, 'message': 'Command is required'}), 400
+                    
+                if command == 'start':
+                    strategy.start()
+                    update_status_file()
+                    return jsonify({'success': True, 'message': 'Trading started'})
+                elif command == 'stop':
+                    strategy.stop()
+                    update_status_file()
+                    return jsonify({'success': True, 'message': 'Trading stopped'})
+                else:
+                    return jsonify({'success': False, 'message': f'Unknown command: {command}'}), 400
+                    
+            except Exception as e:
+                logger.error(f'Error handling command: {str(e)}')
+                return jsonify({'success': False, 'message': f'Error: {str(e)}'}), 500
+        else:
+            # GET request - return status with safe defaults
+            status = {
+                'success': True,
+                'is_running': getattr(strategy, 'is_running', False),
+                'status': 'active' if getattr(strategy, 'is_running', False) else 'inactive',
+                'mode': 'paper',
+                'last_updated': datetime.now().isoformat(),
+                'details': {
+                    'balance': getattr(strategy, 'portfolio_value', 0),
+                    'holdings': getattr(strategy, 'holdings', {}),
+                    'metrics': {
+                        'total_trades': len(getattr(strategy, 'trade_history', [])),
+                        'win_rate': getattr(strategy, 'win_rate', 0),
+                        'profit_loss': getattr(strategy, 'total_pnl', 0)
+                    }
+                }
+            }
+            return jsonify(status)
+            
+    except Exception as e:
+        logger.error(f'Error in handle_paper_trading: {str(e)}')
+        return jsonify({'success': False, 'message': f'Server error: {str(e)}'}), 500
+
+@paper_trading_bp.route('/status', methods=['GET'])
 def get_status():
     """Get the current paper trading status."""
     try:
@@ -256,5 +312,10 @@ def init_app(app):
 
 
 if __name__ == "__main__":
-    # This can be run as a standalone service
-    app.run(host='0.0.0.0', port=5001, debug=True)
+    # This can be run as a standalone service for testing
+    app = Flask(__name__)
+    CORS(app, resources={
+        r"/trading/*": {"origins": ["http://localhost:5173", "http://127.0.0.1:5173"]}
+    })
+    init_app(app)
+    app.run(debug=True, port=5001)

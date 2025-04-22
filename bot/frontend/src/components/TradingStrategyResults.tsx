@@ -1,7 +1,6 @@
 import React, { useState, useEffect, useCallback, useMemo } from 'react';
 import { Line, XAxis, YAxis, CartesianGrid, Tooltip, Legend, ResponsiveContainer, Area, AreaChart, ReferenceLine, Scatter, Brush, ComposedChart, Bar, ReferenceArea } from 'recharts';
 import { tradeTracker } from '../services/tradeTracker';
-import BotPerformanceCard from './BotPerformanceCard';
 import './TradingStrategyResults.css';
 
 // Define types for our trading signals and data
@@ -1106,7 +1105,15 @@ const TradingStrategyResults: React.FC<TradingStrategyResultsProps> = ({
               <Scatter
                 yAxisId="right"
                 name="Significant Trades"
-                data={performanceData?.tradeHistory.filter(t => Math.abs(t.profit || 0) > 50) || []}
+                data={performanceData?.tradeHistory
+                  .filter(t => Math.abs(t.profit || 0) > 50)
+                  .map(t => ({
+                    x: new Date(t.time).getTime(),
+                    y: t.profit || 0,
+                    profit: t.profit,
+                    action: t.action
+                  })) || []}
+                dataKey="y"
                 shape="circle"
                 fill="#DC2626"
                 fillOpacity={0.6}
