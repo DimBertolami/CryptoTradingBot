@@ -10,11 +10,7 @@ import json
 import time
 import logging
 from datetime import datetime
-<<<<<<< HEAD
 from flask import Flask, request, jsonify, Blueprint
-=======
-from flask import Flask, jsonify, request, Blueprint
->>>>>>> main
 from flask_cors import CORS
 
 # Add parent directory to path for imports
@@ -67,41 +63,22 @@ def update_status_file():
     global last_status_update
     
     try:
-<<<<<<< HEAD
-        # Ensure directory exists
-        os.makedirs(os.path.dirname(status_file), exist_ok=True)
-        
-        # Create status object with safe defaults
         status = {
-            "is_running": getattr(strategy, 'is_running', False),
-            "mode": getattr(strategy, 'mode', 'paper'),
-            "balance": getattr(strategy, 'balance', 0.0),
-            "holdings": getattr(strategy, 'holdings', {}),
-            "base_currency": getattr(strategy, 'base_currency', 'USDT'),
-            "portfolio_value": getattr(strategy, 'portfolio_value', 0.0),
-            "performance": getattr(strategy, 'performance', {}),
-            "trade_history": getattr(strategy, 'trade_history', []),
-            "last_prices": getattr(strategy, 'last_prices', {}),
-            "last_updated": datetime.now().isoformat(),
-            "api_keys_configured": bool(strategy.config.get('api_key') and strategy.config.get('api_secret'))
-=======
-        status = {
-            'is_running': strategy.is_running,
-            'mode': strategy.mode,
-            'balance': strategy.balance,
-            'holdings': strategy.holdings,
-            'base_currency': strategy.base_currency,
-            'portfolio_value': strategy.calculate_portfolio_value(),
-            'performance': strategy.calculate_performance_metrics(),
-            'trade_history': strategy.trade_history,
-            'last_prices': strategy.last_prices,
+            'is_running': getattr(strategy, 'is_running', False),
+            'mode': getattr(strategy, 'mode', 'paper'),
+            'balance': getattr(strategy, 'balance', 0.0),
+            'holdings': getattr(strategy, 'holdings', {}),
+            'base_currency': getattr(strategy, 'base_currency', 'USDT'),
+            'portfolio_value': getattr(strategy, 'portfolio_value', 0.0),
+            'performance': getattr(strategy, 'performance', {}),
+            'trade_history': getattr(strategy, 'trade_history', []),
+            'last_prices': getattr(strategy, 'last_prices', {}),
             'last_updated': datetime.now().isoformat(),
             'api_keys_configured': bool(strategy.config.get('api_key') and strategy.config.get('api_secret')),
-            'api_keys_valid': strategy.validate_api_keys(),
-            'auto_execute_suggested_trades': strategy.auto_execute_suggested_trades,
-            'min_confidence_threshold': strategy.min_confidence_threshold,
-            'suggested_trade_refresh_interval': strategy.suggested_trade_refresh_interval
->>>>>>> main
+            'api_keys_valid': getattr(strategy, 'validate_api_keys', lambda: False)(),
+            'auto_execute_suggested_trades': getattr(strategy, 'auto_execute_suggested_trades', False),
+            'min_confidence_threshold': getattr(strategy, 'min_confidence_threshold', 0.75),
+            'suggested_trade_refresh_interval': getattr(strategy, 'suggested_trade_refresh_interval', 60)
         }
         
         os.makedirs(os.path.dirname(status_file), exist_ok=True)
@@ -170,8 +147,6 @@ def handle_paper_trading():
         return jsonify({'success': False, 'message': f'Server error: {str(e)}'}), 500
 
 @paper_trading_bp.route('/status', methods=['GET'])
-=======
->>>>>>> main
 def get_status():
     """Get the current paper trading status."""
     try:
@@ -337,7 +312,6 @@ def init_app(app):
 
 
 if __name__ == "__main__":
-<<<<<<< HEAD
     # This can be run as a standalone service for testing
     app = Flask(__name__)
     CORS(app, resources={
@@ -345,7 +319,3 @@ if __name__ == "__main__":
     })
     init_app(app)
     app.run(debug=True, port=5001)
-=======
-    # This can be run as a standalone service
-    app.run(host='0.0.0.0', port=5001, debug=True)
->>>>>>> main
