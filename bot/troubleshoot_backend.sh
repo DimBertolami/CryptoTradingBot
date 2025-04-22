@@ -10,10 +10,14 @@ RED='\033[0;31m'
 BLUE='\033[0;34m'
 NC='\033[0m' # No Color
 
+# Get absolute path to script directory
+SCRIPT_DIR=$(dirname "$(readlink -f "$0")")
+cd "$SCRIPT_DIR" || exit 1
+
 # Base directories
-BOT_DIR="/opt/lampp/htdocs/bot"
-BACKEND_DIR="/home/dim/git/Cryptobot"
-LOGS_DIR="$BACKEND_DIR/logs"
+BOT_DIR="$SCRIPT_DIR"
+BACKEND_DIR="$SCRIPT_DIR/backend"
+LOGS_DIR="$SCRIPT_DIR/logs"
 PAPER_TRADING_LOG="$BOT_DIR/paper_trading.log"
 CONFIG_DIR="$BACKEND_DIR/config"
 DATA_DIR="$BACKEND_DIR/data"

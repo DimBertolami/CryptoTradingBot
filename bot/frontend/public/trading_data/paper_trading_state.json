@@ -1,0 +1,60 @@
+{
+  "timestamp": "2025-04-13T04:42:02.747290",
+  "services": {
+    "systemd": {
+      "name": "System Daemon",
+      "status": "active",
+      "pid": null,
+      "managed_by_systemd": true
+    },
+    "backend": {
+      "name": "Trading Engine",
+      "status": "active",
+      "pid": 91326
+    },
+    "signals": {
+      "name": "Signal Generator",
+      "status": "active",
+      "pid": null
+    },
+    "paper_trading": {
+      "name": "Paper Trading",
+      "status": "inactive",
+      "pid": null,
+      "trading_active": false,
+      "log_path": "logs/paper_trading_api.log",
+      "last_error": null,
+      "last_start_time": null
+    },
+    "database": {
+      "name": "Database",
+      "status": "active",
+      "pid": null
+    },
+    "frontend": {
+      "name": "Web Interface",
+      "status": "active",
+      "pid": null
+    }
+  },
+  "logs": {
+    "backend": {
+      "path": "logs/backend.log",
+      "last_modified": "2025-04-13T04:42:02.747303"
+    },
+    "signals": {
+      "path": "logs/signals.log",
+      "last_modified": "2025-04-13T04:42:02.747305"
+    },
+    "paper_trading": {
+      "path": "logs/paper_trading.log",
+      "last_modified": "2025-04-13T04:42:02.747306"
+    }
+  },
+  "trading": {
+    "balance": 10000.0,
+    "holdings": {},
+    "last_prices": {},
+    "trade_history": []
+  }
+}

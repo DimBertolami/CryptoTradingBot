@@ -12,6 +12,9 @@
     "build-storybook": "storybook build"
   },
   "dependencies": {
+    "@emotion/react": "^11.14.0",
+    "@emotion/styled": "^11.14.0",
+    "@mui/material": "^7.0.2",
     "@supabase/supabase-js": "^2.39.7",
     "database": "^0.0.2",
     "date-fns": "^3.3.1",

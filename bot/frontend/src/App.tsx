@@ -467,23 +467,25 @@ function App() {
           side: trade.action.toUpperCase(),
           symbol: trade.symbol,
           price: trade.price,
-          confidence: 1.0, // High confidence for manual trades
-          note: `Manual trade: ${trade.reason || trade.action} ${trade.symbol} at ${trade.price}`
-        }),
+        })
       });
 
-      const resultData = await tradeResult.json();
-
-      if (!tradeResult.ok || resultData.status !== 'success') {
-        throw new Error(resultData.message || 'Trade execution failed');
+      if (!tradeResult.ok) {
+        throw new Error(`Server responded with ${tradeResult.status}: ${tradeResult.statusText}`);
       }
 
-      // Dispatch a custom event to notify the PaperTradingDashboard to refresh
-      const event = new CustomEvent('paper-trading-update');
-      window.dispatchEvent(event);
+      const result = await tradeResult.json();
+      
+      if (result.success) {
+        // Dispatch a custom event to notify the PaperTradingDashboard to refresh
+        const event = new CustomEvent('paper-trading-update');
+        window.dispatchEvent(event);
 
-      showBotThought(`Executed trade: ${trade.action} ${trade.symbol} at ${trade.price}`);
-      return true;
+        showBotThought(`Executed trade: ${trade.action} ${trade.symbol} at ${trade.price}`);
+        return true;
+      } else {
+        throw new Error(result.message || 'Failed to execute trade');
+      }
     } catch (error) {
       console.error('Error executing trade:', error);
       showBotThought(`Failed to execute trade: ${error}`);

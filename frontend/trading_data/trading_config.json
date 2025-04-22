@@ -1,0 +1,12 @@
+{
+  "api_key": "",
+  "api_secret": "",
+  "base_currency": "USDT",
+  "initial_balance": 10000,
+  "trading_pairs": ["BTC/USDT", "ETH/USDT"],
+  "trade_fee": 0.001,
+  "paper_trading": true,
+  "auto_execute_suggested_trades": false,
+  "min_confidence_threshold": 0.7,
+  "suggested_trade_refresh_interval": 60
+}
