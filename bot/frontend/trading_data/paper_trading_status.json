@@ -14,12 +14,12 @@
     "performance": {},
     "trade_history": [],
     "last_prices": {
-        "BTCUSDT": 88444.67,
-        "ETHUSDT": 1587.87,
-        "BNBUSDT": 602.12,
-        "ADAUSDT": 0.6297,
-        "DOGEUSDT": 0.16149
+        "BTCUSDT": 88556.94,
+        "ETHUSDT": 1588.84,
+        "BNBUSDT": 602.25,
+        "ADAUSDT": 0.6298,
+        "DOGEUSDT": 0.16161
     },
-    "last_updated": "2025-04-22T04:00:06.117997",
+    "last_updated": "2025-04-22T04:01:01.498672",
     "api_keys_configured": true
 }
