@@ -9,11 +9,11 @@ NC='\033[0m' # No Color
 echo -e "${YELLOW}Shutting down Trading Bot System...${NC}"
 
 # Try to kill specific PIDs if they were saved
-BACKEND_PID=55574
-FRONTEND_PID=55635
+BACKEND_PID=20997
+FRONTEND_PID=21157
 
 # Try to kill backend by PID first
-if [ ! -z "55574" ] && kill 55574 2>/dev/null; then
+if [ ! -z "20997" ] && kill 20997 2>/dev/null; then
     echo -e "${GREEN}✓ Backend server stopped${NC}"
 else
     echo -e "${YELLOW}Searching for backend server process...${NC}"
@@ -28,7 +28,7 @@ else
 fi
 
 # Try to kill frontend by PID first
-if [ ! -z "55635" ] && kill 55635 2>/dev/null; then
+if [ ! -z "21157" ] && kill 21157 2>/dev/null; then
     echo -e "${GREEN}✓ Frontend server stopped${NC}"
 else
     echo -e "${YELLOW}Searching for frontend server processes...${NC}"

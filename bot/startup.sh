@@ -12,8 +12,9 @@ echo -e "${GREEN}Starting Paper Trading Bot System...${NC}"
 
 # 1. Define directories
 BOT_DIR="/opt/lampp/htdocs/bot"
-BACKEND_DIR="/opt/lampp/htdocs/backend"
+BACKEND_DIR="$BOT_DIR/backend"
 FRONTEND_DIR="$BOT_DIR/frontend"
+VENV_DIR="$BOT_DIR/venv"
 
 # 1.1 Start resource manager to limit CPU/memory usage to 70%
 if [ -f "$BOT_DIR/resource_manager_service.sh" ]; then
@@ -64,8 +65,30 @@ fi
 # 5. Start backend server
 echo -e "${GREEN}Starting backend server...${NC}"
 cd "$BACKEND_DIR"
-source ../venv/bin/activate
-PYTHONPATH=/opt/lampp/htdocs:/opt/lampp/htdocs/backend uvicorn app:app --reload --port 8000 > "$BOT_DIR/backend.log" 2>&1 &
+
+# Create virtual environment if it doesn't exist
+if [ ! -d "$VENV_DIR" ]; then
+    echo -e "${YELLOW}Creating virtual environment...${NC}"
+    python3 -m venv "$VENV_DIR"
+fi
+
+# Activate virtual environment
+source "$VENV_DIR/bin/activate"
+
+# Install backend dependencies if requirements.txt exists
+if [ -f "$BACKEND_DIR/requirements.txt" ]; then
+    echo -e "${YELLOW}Installing backend dependencies...${NC}"
+    pip install -r "$BACKEND_DIR/requirements.txt"
+fi
+
+# Install Flask and other core dependencies if not already installed
+pip install flask flask-cors python-dotenv requests pandas numpy ccxt ta python-binance
+
+# Set Python path to include project root and backend
+export PYTHONPATH="$BOT_DIR:$BACKEND_DIR:$PYTHONPATH"
+
+# Start the backend server
+python3 "$BACKEND_DIR/paper_trading_api.py" > "$BOT_DIR/backend.log" 2>&1 &
 BACKEND_PID=$!
 
 # Check if backend started successfully
@@ -80,7 +103,7 @@ echo -e "${YELLOW}Verifying backend server connection...${NC}"
 MAX_RETRIES=10
 RETRY_COUNT=0
 while [ $RETRY_COUNT -lt $MAX_RETRIES ]; do
-    if curl -s "http://localhost:8000/trading/status" > /dev/null 2>&1; then
+    if curl -s "http://localhost:5001/trading/status" > /dev/null 2>&1; then
         echo -e "${GREEN}✓ Backend server is responding correctly${NC}"
         break
     else

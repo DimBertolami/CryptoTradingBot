@@ -471,6 +471,7 @@ const TechnicalAnalysisChart: React.FC<TechnicalAnalysisChartProps> = ({
                   shape="square"
                   stroke="#22c55e"
                   strokeWidth={2}
+                  yAxisId="price"
                 >
                   {data.filter(d => d.buySignal).map((_, index) => (
                     <circle key={index} r={4} />
@@ -486,6 +487,7 @@ const TechnicalAnalysisChart: React.FC<TechnicalAnalysisChartProps> = ({
                   shape="square"
                   stroke="#ef4444"
                   strokeWidth={2}
+                  yAxisId="price"
                 >
                   {data.filter(d => d.sellSignal).map((_, index) => (
                     <circle key={index} r={4} />
