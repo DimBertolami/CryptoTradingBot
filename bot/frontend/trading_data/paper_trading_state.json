@@ -10,73 +10,69 @@
     "open_orders": [],
     "equity_history": [
         {
-            "timestamp": "2025-04-22T03:46:57.337249",
+            "timestamp": "2025-04-22T03:35:11.634471",
             "equity": 10000
         },
         {
-            "timestamp": "2025-04-22T03:47:48.436740",
+            "timestamp": "2025-04-22T03:35:15.344930",
             "equity": 10000
         },
         {
-            "timestamp": "2025-04-22T03:48:50.997109",
+            "timestamp": "2025-04-22T03:40:18.558615",
             "equity": 10000
         },
         {
-            "timestamp": "2025-04-22T03:49:53.736983",
+            "timestamp": "2025-04-22T03:45:21.097469",
             "equity": 10000
         },
         {
-            "timestamp": "2025-04-22T03:50:56.408219",
+            "timestamp": "2025-04-22T03:50:23.763174",
             "equity": 10000
         },
         {
-            "timestamp": "2025-04-22T03:51:59.213823",
+            "timestamp": "2025-04-22T03:55:26.843956",
             "equity": 10000
         },
         {
-            "timestamp": "2025-04-22T03:53:02.045678",
+            "timestamp": "2025-04-22T04:00:29.950105",
             "equity": 10000
         },
         {
-            "timestamp": "2025-04-22T03:54:05.025871",
+            "timestamp": "2025-04-22T04:05:33.050606",
             "equity": 10000
         },
         {
-            "timestamp": "2025-04-22T03:55:08.305513",
+            "timestamp": "2025-04-22T04:10:36.158902",
             "equity": 10000
         },
         {
-            "timestamp": "2025-04-22T03:56:11.386675",
+            "timestamp": "2025-04-22T04:15:40.691115",
             "equity": 10000
         },
         {
-            "timestamp": "2025-04-22T03:57:14.407204",
+            "timestamp": "2025-04-22T04:20:43.796633",
             "equity": 10000
         },
         {
-            "timestamp": "2025-04-22T03:58:17.337591",
+            "timestamp": "2025-04-22T04:25:46.833965",
             "equity": 10000
         },
         {
-            "timestamp": "2025-04-22T03:59:20.416290",
+            "timestamp": "2025-04-22T04:30:49.758141",
             "equity": 10000
         },
         {
-            "timestamp": "2025-04-22T04:00:23.414414",
-            "equity": 10000
-        },
-        {
-            "timestamp": "2025-04-22T04:01:26.299604",
+            "timestamp": "2025-04-22T04:35:52.850296",
             "equity": 10000
         }
     ],
     "trade_history": [],
     "last_prices": {
-        "BTCUSDT": 88618.79,
-        "ETHUSDT": 1591.41,
-        "BNBUSDT": 602.2,
-        "ADAUSDT": 0.6305,
-        "DOGEUSDT": 0.16186
+        "BTCUSDT": 88084.91,
+        "ETHUSDT": 1576.05,
+        "BNBUSDT": 599.74,
+        "ADAUSDT": 0.6236,
+        "DOGEUSDT": 0.16054
     },
     "api_keys": {
         "key": "X8HpKiRKv6fNCulGEV2ReFpgyeS4wT0SWgokopvObB6ICUADi5nOEUZNFbcWUP9I",
@@ -84,5 +80,5 @@
     },
     "mode": "paper",
     "is_running": true,
-    "last_updated": "2025-04-22T04:01:26.299862"
+    "last_updated": "2025-04-22T04:35:52.850552"
 }
