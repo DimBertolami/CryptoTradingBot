@@ -1,0 +1,23 @@
+{
+        "is_running": true,
+        "mode": "paper",
+        "balance": 10000,
+        "holdings": {},
+        "base_currency": "USDT",
+        "portfolio_value": 10000,
+        "performance": {
+            "total_trades": 0,
+            "win_rate": 0,
+            "profit_loss": 0,
+            "return_pct": 0,
+            "sharpe_ratio": 0,
+            "max_drawdown": 0
+        },
+        "trade_history": [],
+        "last_prices": {},
+        "last_updated": "$(date -u +%FT%TZ)",
+        "api_keys_configured": false,
+        "auto_execute_suggested_trades": true,
+        "min_confidence_threshold": 0.75,
+        "suggested_trade_refresh_interval": $INTERVAL_SECONDS
+    }

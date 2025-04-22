@@ -41,6 +41,17 @@ interface Props {
 }
 
 const PortfolioMetrics: React.FC<Props> = ({ metrics, timeRange }) => {
+  // Ensure we have valid data
+  const validMetrics = metrics.filter(metric => {
+    return (
+      metric.totalValue != null &&
+      !isNaN(metric.totalValue) &&
+      metric.returns != null &&
+      !isNaN(metric.returns) &&
+      metric.volatility != null &&
+      !isNaN(metric.volatility)
+    );
+  });
   const formatDate = (timestamp: string) => {
     switch (timeRange) {
       case 'day':
@@ -60,7 +71,7 @@ const PortfolioMetrics: React.FC<Props> = ({ metrics, timeRange }) => {
     <div className="mb-8">
       <h3 className="text-lg font-semibold mb-4">Portfolio Performance</h3>
       <ResponsiveContainer width="100%" height={300}>
-        <ComposedChart data={metrics}>
+        <ComposedChart data={validMetrics}>
           <CartesianGrid strokeDasharray="3 3" />
           <XAxis
             dataKey="timestamp"
@@ -100,7 +111,7 @@ const PortfolioMetrics: React.FC<Props> = ({ metrics, timeRange }) => {
     <div className="mb-8">
       <h3 className="text-lg font-semibold mb-4">Risk Metrics</h3>
       <ResponsiveContainer width="100%" height={300}>
-        <ComposedChart data={metrics}>
+        <ComposedChart data={validMetrics}>
           <CartesianGrid strokeDasharray="3 3" />
           <XAxis
             dataKey="timestamp"
@@ -141,7 +152,7 @@ const PortfolioMetrics: React.FC<Props> = ({ metrics, timeRange }) => {
     <div className="mb-8">
       <h3 className="text-lg font-semibold mb-4">Diversification Metrics</h3>
       <ResponsiveContainer width="100%" height={300}>
-        <ComposedChart data={metrics}>
+        <ComposedChart data={validMetrics}>
           <CartesianGrid strokeDasharray="3 3" />
           <XAxis
             dataKey="timestamp"

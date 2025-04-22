@@ -9,15 +9,30 @@ export default defineConfig({
   },
   server: {
     proxy: {
-      '/trading': {
+      '/trading/paper': {
         target: 'http://localhost:5001',
         changeOrigin: true,
-        secure: false,
+        secure: false
       },
       '/trading_data': {
         target: 'http://localhost:5001',
         changeOrigin: true,
-        secure: false,
+        secure: false
+      },
+      '/api': {
+        target: 'http://localhost:5173',
+        changeOrigin: true,
+        secure: false
+      },
+      '/backtest': {
+        target: 'http://localhost:5001',
+        changeOrigin: true,
+        secure: false
+      },
+      '/ml': {
+        target: 'http://localhost:5001',
+        changeOrigin: true,
+        secure: false
       }
     }
   },

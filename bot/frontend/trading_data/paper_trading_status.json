@@ -2,6 +2,7 @@
     "is_running": true,
     "mode": "paper",
     "balance": 10000,
+<<<<<<< HEAD
     "holdings": {
         "BTCUSDT": 0,
         "ETHUSDT": 0,
@@ -21,5 +22,20 @@
         "DOGEUSDT": 0.16161
     },
     "last_updated": "2025-04-22T04:01:01.498672",
+=======
+    "holdings": {},
+    "base_currency": "USDT",
+    "portfolio_value": 10000,
+    "performance": {
+        "total_trades": 0,
+        "win_rate": 0,
+        "profit_loss": 0.0,
+        "return_pct": 0.0,
+        "max_drawdown": 0
+    },
+    "trade_history": [],
+    "last_prices": {},
+    "last_updated": "2025-04-13T04:24:03.737900",
+>>>>>>> main
     "api_keys_configured": true
 }

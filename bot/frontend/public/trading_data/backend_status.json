@@ -1,0 +1,23 @@
+{
+  "last_updated": "2025-04-13T03:04:11+02:00",
+  "services": {
+    "paper_trading": {
+      "status": "inactive",
+      "pid": null,
+      "log_path": "logs/paper_trading_api.log",
+      "last_error": null,
+      "last_start_time": null
+    },
+    "trading_data": {
+      "status": "active",
+      "last_update": "2025-04-13T03:04:11+02:00"
+    }
+  },
+  "system": {
+    "cpu_usage": 0.0,
+    "memory_usage": 0.0,
+    "disk_usage": 0.0,
+    "last_health_check": "2025-04-13T03:04:11+02:00"
+  },
+  "version": "1.0.0"
+}

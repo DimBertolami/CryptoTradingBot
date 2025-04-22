@@ -82,10 +82,10 @@ const DEFAULT_STATUS: PaperTradingStatus = {
   suggested_trade_refresh_interval: 60
 };
 
-const PaperTradingDashboard: React.FC<PaperTradingDashboardProps> = ({ 
-  selectedPeriod = '1m',
-  autoExecuteEnabled: propAutoExecuteEnabled,
-  onAutoExecuteChange
+const PaperTradingDashboard: React.FC<PaperTradingDashboardProps> = ({
+  selectedPeriod = '1d',
+  autoExecuteEnabled: propAutoExecuteEnabled = true,
+  onAutoExecuteChange = () => {}
 }) => {
   const [status, setStatus] = useState<PaperTradingStatus>(DEFAULT_STATUS);
   const [error, setError] = useState<string | null>(null);
@@ -102,7 +102,7 @@ const PaperTradingDashboard: React.FC<PaperTradingDashboardProps> = ({
   const [highlightedTradeId, setHighlightedTradeId] = useState<number | null>(null);
   
   // Auto-execution settings
-  const [autoExecuteEnabled, setAutoExecuteEnabled] = useState<boolean>(propAutoExecuteEnabled ?? false);
+  const [autoExecuteEnabled, setAutoExecuteEnabled] = useState<boolean>(propAutoExecuteEnabled);
   const [confidenceThreshold, setConfidenceThreshold] = useState<number>(0.75);
   // Using the main dashboard's interval instead of a separate setting
 
@@ -227,7 +227,13 @@ const PaperTradingDashboard: React.FC<PaperTradingDashboardProps> = ({
       setError(null);
       
       // Use API endpoint to get real data
-      const response = await fetch('http://localhost:5001/trading/paper');
+      const response = await fetch('/trading/paper', {
+        method: 'GET',
+        headers: {
+          'Content-Type': 'application/json',
+        },
+      });
+      
       if (!response.ok) {
         throw new Error(`Server responded with ${response.status}: ${response.statusText}`);
       }
@@ -246,6 +252,7 @@ const PaperTradingDashboard: React.FC<PaperTradingDashboardProps> = ({
           result.data.trade_history = [];
         }
         
+<<<<<<< HEAD
         // Try to fetch trade history from all possible sources as the 3D visualization
         const possiblePaths = [
           '/trading_data/paper_trading_status.json',
@@ -337,6 +344,11 @@ const PaperTradingDashboard: React.FC<PaperTradingDashboardProps> = ({
           result.data.performance.total_trades = result.data.trade_history.length;
         }
         
+=======
+        // Update status with the new data
+        setStatus(result.data);
+      } else {
+>>>>>>> main
         throw new Error(result.message || 'Failed to fetch trading status');
       }
       
@@ -452,45 +464,34 @@ const PaperTradingDashboard: React.FC<PaperTradingDashboardProps> = ({
     } catch (err) {
       console.error('Error fetching trading status:', err);
       setError(err instanceof Error ? err.message : 'Failed to fetch trading status');
+<<<<<<< HEAD
       setStatus(prev => ({ ...prev, is_running: false }));
+=======
+>>>>>>> main
     } finally {
       setIsLoading(false);
     }
   }, []);
 
-  // Send command to the trading API
-  const sendCommand = async (command: string, params: Record<string, string | number | boolean> = {}) => {
-    console.log(`Sending command: ${command} with params:`, params);
+  // Send command to backend
+  const sendCommand = useCallback(async (command: string, params: any = {}) => {
     try {
       setIsLoading(true);
       setError(null);
       
-      // Convert all parameters to strings for consistency
-      const stringParams: Record<string, string> = {};
-      Object.entries(params).forEach(([key, value]) => {
-        if (typeof value === 'boolean') {
-          stringParams[key] = value ? 'true' : 'false';
-        } else {
-          stringParams[key] = String(value);
-        }
-      });
-      
-      console.log(`Sending command with stringified params:`, stringParams);
-      
-      const response = await fetch('http://localhost:5001/trading/paper', {
+      const response = await fetch('/trading/paper', {
         method: 'POST',
         headers: {
           'Content-Type': 'application/json',
         },
         body: JSON.stringify({
           command,
-          ...stringParams
-        }),
+          params
+        })
       });
       
-      console.log(`Response status:`, response.status, response.statusText);
-      
       if (!response.ok) {
+<<<<<<< HEAD
         const errorText = await response.text();
         let errorMessage = `Server error: ${response.status} ${response.statusText}`;
         try {
@@ -500,26 +501,49 @@ const PaperTradingDashboard: React.FC<PaperTradingDashboardProps> = ({
           }
         } catch {}
         throw new Error(errorMessage);
+=======
+        throw new Error(`Server responded with ${response.status}: ${response.statusText}`);
+>>>>>>> main
       }
       
       const result = await response.json();
-      console.log(`Command result:`, result);
       
+<<<<<<< HEAD
       if (!result.success) {
         throw new Error(result.message || `Failed to execute command: ${command}`);
+=======
+      if (result.status === 'success') {
+        console.log('Command executed successfully:', result.data);
+        // Don't update local state with trade - wait for fetchStatus to get the updated status
+        // This ensures we have the most accurate data from the backend
+        if (command === 'execute_trade') {
+          // Trigger a status update after a short delay to ensure the backend has processed the trade
+          setTimeout(() => {
+            fetchStatus();
+          }, 1000);
+        }
+      } else {
+        throw new Error(result.message || 'Failed to execute command');
+>>>>>>> main
       }
       
       // For successful commands, update status and return
       await fetchStatus();
+<<<<<<< HEAD
       return result;
     } catch (err) {
       console.error(`Error executing command ${command}:`, err);
       setError(err instanceof Error ? err.message : String(err));
       throw err;
+=======
+    } catch (err) {
+      console.error('Error executing command:', err);
+      setError(err instanceof Error ? err.message : 'Failed to execute command');
+>>>>>>> main
     } finally {
       setIsLoading(false);
     }
-  };
+  }, [fetchStatus]);
   
   // Format currency with symbol
   const formatCurrency = (value: number, currency?: string): string => {
@@ -1220,7 +1244,7 @@ const PaperTradingDashboard: React.FC<PaperTradingDashboardProps> = ({
                     
                     // Find the average purchase price from BUY trades for this symbol
                     const buyTrades = (status.trade_history || []).filter(trade => 
-                      trade.symbol === symbol && trade.side === 'BUY'
+                      trade.symbol === symbol && trade.side === 'BUY' && new Date(trade.timestamp) < new Date()
                     );
                     
                     if (buyTrades.length > 0) {
