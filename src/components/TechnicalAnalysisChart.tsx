@@ -62,17 +62,6 @@ export class ChartErrorBoundary extends React.Component<
 }
 
 const TechnicalAnalysisChart: React.FC<Props> = ({ data, timeRange }) => {
-<<<<<<< HEAD
-  // Ensure data is valid
-  const validData = data.filter(item => (
-    item.price != null &&
-    !isNaN(item.price) &&
-    item.volume != null &&
-    !isNaN(item.volume)
-  ));
-
-=======
->>>>>>> ea1c38704abbb74e8dbb0c9c3275c87e413a456d
   const formatDate = (timestamp: string) => {
     const date = new Date(timestamp);
     switch (timeRange) {
@@ -90,11 +79,7 @@ const TechnicalAnalysisChart: React.FC<Props> = ({ data, timeRange }) => {
   return (
     <div className="w-full h-[500px] bg-gray-800 rounded-lg p-4">
       <ResponsiveContainer>
-<<<<<<< HEAD
-        <ComposedChart data={validData}>
-=======
         <ComposedChart data={data}>
->>>>>>> ea1c38704abbb74e8dbb0c9c3275c87e413a456d
           <CartesianGrid strokeDasharray="3 3" stroke="#374151" />
           <XAxis
             dataKey="timestamp"
