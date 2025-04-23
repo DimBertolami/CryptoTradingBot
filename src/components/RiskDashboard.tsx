@@ -14,17 +14,6 @@ interface RiskMetrics {
   learningProgress: {
     accuracyScore: number;
     trainingEpochs: number;
-<<<<<<< HEAD
-    lastUpdated: string;
-  };
-  strategyPerformance: {
-    [key: string]: {
-      exposure: number;
-      returns: number;
-      risk: number;
-    };
-=======
->>>>>>> ea1c38704abbb74e8dbb0c9c3275c87e413a456d
   };
   portfolioMetrics: {
     sharpeRatio: number;
@@ -50,46 +39,21 @@ const RiskDashboard: React.FC = () => {
 
   const fetchMetrics = async () => {
     try {
-<<<<<<< HEAD
-      // For development, use sample data
-      // In production, this would be: await fetch('/trading/risk/metrics');
-=======
       // Simulated API call with sample data
->>>>>>> ea1c38704abbb74e8dbb0c9c3275c87e413a456d
       const sampleData: RiskMetrics = {
         riskLevel: 0.65,
         volatility: 0.25,
         drawdown: -0.15,
         confidence: 0.85,
-<<<<<<< HEAD
-        cumulativeProfit: 2850.75,
-        botConfidence: 0.82,
-        learningProgress: {
-          accuracyScore: 0.78,
-          trainingEpochs: 150,
-          lastUpdated: new Date().toISOString()
-        },
-        strategyPerformance: {
-          'Mean Reversion': { exposure: 0.3, returns: 0.12, risk: 0.4 },
-          'Trend Following': { exposure: 0.4, returns: 0.15, risk: 0.6 },
-          'Breakout': { exposure: 0.2, returns: 0.08, risk: 0.3 },
-          'ML-Based': { exposure: 0.1, returns: 0.18, risk: 0.7 }
-=======
         cumulativeProfit: 15000,
         botConfidence: 0.78,
         learningProgress: {
           accuracyScore: 0.82,
           trainingEpochs: 1000,
->>>>>>> ea1c38704abbb74e8dbb0c9c3275c87e413a456d
         },
         portfolioMetrics: {
           sharpeRatio: 1.8,
           sortinoRatio: 2.1,
-<<<<<<< HEAD
-          maxDrawdown: 0.25,
-          volatility: 0.2
-        }
-=======
           maxDrawdown: -0.12,
           volatility: 0.22,
         },
@@ -99,7 +63,6 @@ const RiskDashboard: React.FC = () => {
           'MACD': { returns: 0.18, risk: 0.09, trades: 180 },
           'Bollinger Bands': { returns: 0.14, risk: 0.07, trades: 130 },
         },
->>>>>>> ea1c38704abbb74e8dbb0c9c3275c87e413a456d
       };
       setMetrics(sampleData);
     } catch (error) {
@@ -140,39 +103,6 @@ const RiskDashboard: React.FC = () => {
           <CardContent>
             <Typography variant="h6" gutterBottom>
               Bot Learning Metrics
-            </Typography>
-            <Grid container spacing={2}>
-              <Grid {...{ item: true, xs: 6 }}>
-                <Typography variant="body1" color="primary">
-                  Cumulative Profit: ${metrics.cumulativeProfit.toFixed(2)}
-                </Typography>
-              </Grid>
-              <Grid {...{ item: true, xs: 6 }}>
-                <Typography variant="body1" color="primary">
-                  Bot Confidence: {formatPercentage(metrics.botConfidence)}
-                </Typography>
-              </Grid>
-              <Grid {...{ item: true, xs: 6 }}>
-                <Typography variant="body1">
-                  Accuracy Score: {formatPercentage(metrics.learningProgress.accuracyScore)}
-                </Typography>
-              </Grid>
-              <Grid {...{ item: true, xs: 6 }}>
-                <Typography variant="body1">
-                  Training Epochs: {metrics.learningProgress.trainingEpochs}
-                </Typography>
-              </Grid>
-            </Grid>
-          </CardContent>
-        </Card>
-      </Grid>
-
-      {/* Bot Learning Metrics Card */}
-      <Grid {...{ item: true, xs: 12, md: 8 }}>
-        <Card>
-          <CardContent>
-            <Typography variant="h6" gutterBottom>
-              Bot Learning & Performance
             </Typography>
             <Grid container spacing={2}>
               <Grid {...{ item: true, xs: 6 }}>
