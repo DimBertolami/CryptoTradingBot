@@ -48,6 +48,45 @@ Object.entries(proxyConfig).forEach(([path, config]) => {
     });
 });
 
+// Serve logs
+app.get('/logs', (req, res) => {
+    const logDir = path.join(__dirname, '../backend/logs');
+    
+    // Get list of log files
+    fs.readdir(logDir, (err, files) => {
+        if (err) {
+            console.error('Error reading logs directory:', err);
+            res.status(500).json({ error: 'Failed to read logs directory' });
+            return;
+        }
+        
+        // Filter for log files
+        const logFiles = files.filter(file => file.endsWith('.log') || file.endsWith('.txt'));
+        
+        // Get content of each log file
+        const logContents = [];
+        
+        logFiles.forEach(file => {
+            const filePath = path.join(logDir, file);
+            fs.readFile(filePath, 'utf8', (err, content) => {
+                if (err) {
+                    console.error(`Error reading ${file}:`, err);
+                    return;
+                }
+                logContents.push({
+                    filename: file,
+                    content: content
+                });
+                
+                // If this is the last file, send response
+                if (logContents.length === logFiles.length) {
+                    res.json(logContents);
+                }
+            });
+        });
+    });
+});
+
 // Serve status files
 app.get('/trading_data/:filename', (req, res) => {
   const { filename } = req.params;

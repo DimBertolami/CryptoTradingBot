@@ -1,5 +1,6 @@
 import React, { useState, useEffect, useCallback } from 'react';
 import './BackendStatusDashboard.css';
+import { motion } from 'framer-motion';
 
 interface ServiceStatus {
   name: string;
@@ -7,6 +8,7 @@ interface ServiceStatus {
   pid: number | null;
   trading_active?: boolean;
   managed_by_systemd?: boolean;
+  dependencies?: string[];
 }
 
 interface LogStatus {
@@ -32,6 +34,13 @@ interface BackendStatus {
   error?: string;
 }
 
+const SERVICE_DEPENDENCIES = {
+  'frontend': ['backend'],
+  'backend': ['database', 'signals'],
+  'paper_trading': ['backend', 'database'],
+  'signals': ['backend']
+};
+
 const BackendStatusDashboard: React.FC = () => {
   const [status, setStatus] = useState<BackendStatus | null>(null);
   const [loading, setLoading] = useState<boolean>(true);
@@ -39,7 +48,7 @@ const BackendStatusDashboard: React.FC = () => {
   const [expanded, setExpanded] = useState<boolean>(false);
   const [lastUpdated, setLastUpdated] = useState<Date | null>(null);
   const [autoRefresh, setAutoRefresh] = useState<boolean>(true);
-
+  const [resolvingService, setResolvingService] = useState<string | null>(null);
   const [resolvingAll, setResolvingAll] = useState<boolean>(false);
   
   // Fallback status data for when the backend is unreachable
@@ -66,9 +75,9 @@ const BackendStatusDashboard: React.FC = () => {
         },
         paper_trading: {
           name: 'Paper Trading',
-          status: 'active',
+          status: 'unknown',
           pid: null,
-          trading_active: true
+          trading_active: false
         },
         database: {
           name: 'Database',
@@ -99,51 +108,61 @@ const BackendStatusDashboard: React.FC = () => {
     return fallbackData;
   };
   
+  // Check service status using standardized endpoint
+  const checkServiceStatus = useCallback(async (service: string) => {
+    try {
+      const response = await fetch(`/api/status/${service}`);
+      if (!response.ok) {
+        throw new Error(`Service ${service} returned status ${response.status}`);
+      }
+      const data = await response.json();
+      return data;
+    } catch (error) {
+      console.error(`Error checking ${service} status:`, error);
+      return { status: 'unknown', error: error instanceof Error ? error.message : 'Unknown error' };
+    }
+  }, []);
+
   // Attempt to ping each service to determine availability
   const checkServiceAvailability = useCallback(async () => {
-    const endpoints = {
-      backend: '/trading/backend_status',
-      signals: '/trading/signals_status',
-      paper_trading: '/trading/paper_trading_status',
-      database: '/trading/database_status'
-    };
-    
     try {
-      // Start with fallback data
+      // Check all services in parallel
+      const [backendStatus, signalsStatus, paperTradingStatus, databaseStatus] = await Promise.all([
+        checkServiceStatus('backend'),
+        checkServiceStatus('signals'),
+        checkServiceStatus('paper_trading'),
+        checkServiceStatus('database')
+      ]);
+
       const currentStatus = generateFallbackStatus();
       currentStatus.timestamp = new Date().toISOString();
       
-      // Check each service endpoint
-      for (const [service, endpoint] of Object.entries(endpoints)) {
-        try {
-          const controller = new AbortController();
-          const timeoutId = setTimeout(() => controller.abort(), 2000);
-          const response = await fetch(endpoint, { method: 'GET', signal: controller.signal });
-          clearTimeout(timeoutId);
-          
-          if (response.ok) {
-            const data = await response.json();
-            // Use Record type to avoid eslint warnings
-            (currentStatus.services as Record<string, ServiceStatus>)[service].status = data.success ? 'active' : 'inactive';
-            if (data.pid) (currentStatus.services as Record<string, ServiceStatus>)[service].pid = data.pid;
-            if (service === 'paper_trading' && data.trading_active !== undefined) {
-              (currentStatus.services as Record<string, ServiceStatus>)[service].trading_active = data.trading_active;
-            }
-          }
-        } catch (err) {
-          console.log(`Service ${service} check failed:`, err);
-          (currentStatus.services as Record<string, ServiceStatus>)[service].status = 'unreachable';
-        }
-      }
+      // Update service statuses
+      (currentStatus.services as Record<string, ServiceStatus>).backend.status = backendStatus.status;
+      (currentStatus.services as Record<string, ServiceStatus>).signals.status = signalsStatus.status;
+      (currentStatus.services as Record<string, ServiceStatus>).paper_trading.status = paperTradingStatus.status;
+      (currentStatus.services as Record<string, ServiceStatus>).paper_trading.trading_active = paperTradingStatus.is_running;
+      (currentStatus.services as Record<string, ServiceStatus>).database.status = databaseStatus.status;
       
-      return currentStatus;
-    } catch (err) {
-      console.error('Error checking service availability:', err);
-      const fallbackStatus = generateFallbackStatus();
-      fallbackStatus.error = err instanceof Error ? err.message : 'Unknown error';
-      return fallbackStatus;
+      // Update logs
+      const [backendLog, signalsLog, paperTradingLog] = await Promise.all([
+        checkServiceStatus('backend-log'),
+        checkServiceStatus('signals-log'),
+        checkServiceStatus('paper_trading-log')
+      ]);
+      
+      currentStatus.logs.backend.last_modified = backendLog.last_modified || currentStatus.timestamp;
+      currentStatus.logs.signals.last_modified = signalsLog.last_modified || currentStatus.timestamp;
+      currentStatus.logs.paper_trading.last_modified = paperTradingLog.last_modified || currentStatus.timestamp;
+      
+      setStatus(currentStatus);
+      setErrorMessage(null);
+      setLastUpdated(new Date());
+    } catch (error) {
+      console.error('Error checking service availability:', error);
+      setErrorMessage('Error connecting to backend services');
     }
-  }, []);
+  }, [checkServiceStatus]);
 
   // Keep track of manually resolved services to prevent them from being marked as inactive on refresh
   const [resolvedServices, setResolvedServices] = useState<string[]>([]);
@@ -214,7 +233,7 @@ const BackendStatusDashboard: React.FC = () => {
     } finally {
       setLoading(false);
     }
-  }, [resolvedServices]);
+  }, [resolvedServices, checkServiceAvailability]);
 
   // Poll for status updates
   useEffect(() => {
@@ -292,6 +311,169 @@ const BackendStatusDashboard: React.FC = () => {
     }
   };
 
+  // Calculate service positions for dependency visualization
+  const calculateServicePositions = useCallback((services: Record<string, ServiceStatus>) => {
+    const positions: Record<string, { x: number; y: number }> = {};
+    const layers: string[][] = [];
+    const usedServices = new Set<string>();
+
+    // First layer: independent services
+    layers.push(['systemd']);
+    usedServices.add('systemd');
+
+    // Second layer: backend and database
+    layers.push(['database', 'backend']);
+    usedServices.add('database');
+    usedServices.add('backend');
+
+    // Third layer: dependent services
+    const thirdLayer = ['signals', 'paper_trading'];
+    layers.push(thirdLayer);
+    thirdLayer.forEach(svc => usedServices.add(svc));
+
+    // Fourth layer: frontend
+    layers.push(['frontend']);
+    usedServices.add('frontend');
+
+    // Calculate positions
+    const totalWidth = 1000;
+    const totalHeight = 600;
+    const padding = 50;
+    const layerSpacing = 100;
+    const nodeWidth = 100;
+    const nodeHeight = 100;
+
+    layers.forEach((layer, layerIndex) => {
+      const layerX = padding + (layerIndex * layerSpacing);
+      const layerY = (totalHeight - nodeHeight) / 2;
+      
+      layer.forEach((service, index) => {
+        const serviceY = layerY + (index * (nodeHeight + 20));
+        positions[service] = {
+          x: layerX,
+          y: serviceY
+        };
+      });
+    });
+
+    return positions;
+  }, []);
+
+  // Render dependency visualization
+  const renderDependencyGraph = useCallback((services: Record<string, ServiceStatus>) => {
+    const positions = calculateServicePositions(services);
+    
+    // Render dependency lines
+    const dependencyLines = Object.entries(SERVICE_DEPENDENCIES).flatMap(([service, dependencies]) => {
+      return dependencies.map((dep) => {
+        const fromPos = positions[service];
+        const toPos = positions[dep];
+        
+        if (!fromPos || !toPos) return null;
+        
+        const x1 = fromPos.x + 50;
+        const y1 = fromPos.y + 50;
+        const x2 = toPos.x + 50;
+        const y2 = toPos.y + 50;
+        
+        return (
+          <>
+            <line
+              key={`${service}-${dep}-line`}
+              x1={x1}
+              y1={y1}
+              x2={x2}
+              y2={y2}
+              className="dependency-line"
+            />
+            <g key={`${service}-${dep}-arrow`}>
+              <line
+                x1={x2}
+                y1={y2}
+                x2={x2 - 10}
+                y2={y2 - 10}
+                className="dependency-arrow"
+              />
+              <line
+                x1={x2}
+                y1={y2}
+                x2={x2 - 10}
+                y2={y2 + 10}
+                className="dependency-arrow"
+              />
+            </g>
+          </>
+        );
+      });
+    });
+
+    // Render service nodes
+    const serviceNodes = Object.entries(services).map(([key, service]) => {
+      const pos = positions[key];
+      if (!pos) return null;
+
+      const statusColor = getStatusColor(service.status);
+      
+      return (
+        <g key={key} className="dependency-node">
+          <rect
+            x={pos.x}
+            y={pos.y}
+            width={100}
+            height={100}
+            fill="white"
+            stroke={statusColor}
+            strokeWidth={2}
+            rx={8}
+          />
+          <text
+            x={pos.x + 50}
+            y={pos.y + 50}
+            textAnchor="middle"
+            dominantBaseline="middle"
+            fill={statusColor}
+            fontSize={14}
+          >
+            {service.name}
+          </text>
+          <circle
+            cx={pos.x + 10}
+            cy={pos.y + 10}
+            r={5}
+            fill={statusColor}
+          />
+        </g>
+      );
+    });
+
+    return (
+      <svg className="dependency-graph" viewBox={`0 0 1200 600`}>
+        {dependencyLines}
+        {serviceNodes}
+      </svg>
+    );
+  }, [calculateServicePositions]);
+
+  // Calculate health percentage
+  const calculateHealth = useCallback((services: Record<string, ServiceStatus>) => {
+    const totalServices = Object.keys(services).length;
+    let activeServices = 0;
+    
+    Object.values(services).forEach(service => {
+      if (service.status === 'active' || service.status === 'running') {
+        activeServices++;
+      }
+    });
+    
+    const percentage = (activeServices / totalServices) * 100;
+    
+    let label = 'Healthy';
+    if (percentage < 100) label = 'Degraded';
+    if (percentage < 75) label = 'Critical';
+    
+    return { percentage, label };
+  }, []);
+
   // Initial data fetch
   useEffect(() => {
     fetchStatus();
@@ -304,158 +486,89 @@ const BackendStatusDashboard: React.FC = () => {
     // eslint-disable-next-line react-hooks/exhaustive-deps
   }, [autoRefresh, fetchStatus]);
 
-  // Calculate overall system health percentage
-  const calculateSystemHealth = (): { percentage: number; label: string } => {
-    if (!status) return { percentage: 0, label: 'Offline' };
-    
-    const services = Object.values(status.services);
-    const activeServices = services.filter(s => 
-      ['running', 'active'].includes(s.status.toLowerCase())
-    ).length;
-    
-    const percentage = Math.round((activeServices / services.length) * 100);
-    
-    let label = 'Offline';
-    if (percentage === 100) label = 'Fully Operational';
-    else if (percentage >= 80) label = 'Mostly Operational';
-    else if (percentage >= 50) label = 'Partially Operational';
-    else if (percentage > 0) label = 'Limited Functionality';
-    
-    return { percentage, label };
-  };
-  
-  const systemHealth = calculateSystemHealth();
-  
   // Function to attempt to resolve a specific service issue
   const resolveService = async (service: string) => {
     try {
-      // Get the service command from the status file
-      const statusFile = await fetch('/trading_data/paper_trading_status.json');
-      const status = await statusFile.json();
+      setResolvingService(service);
       
-      // Get the service log path from status
-      const logPath = status.logs?.[service]?.path;
+      // Get service dependencies
+      const dependencies = SERVICE_DEPENDENCIES[service] || [];
       
-      // If service is not running, try to start it
-      if (status.services?.[service]?.status !== 'active') {
-        // Use the proper command path
-        const command = 'python3 backend/paper_trading_cli.py restart';
-        
-        // Execute the command
-        const result = await fetch('/api/execute-command', {
-          method: 'POST',
-          headers: {
-            'Content-Type': 'application/json',
-          },
-          body: JSON.stringify({
-            command,
-            service,
-            logPath
-          })
-        });
-        
-        if (!result.ok) {
-          throw new Error('Failed to execute command');
+      // First try to resolve any failed dependencies
+      for (const dep of dependencies) {
+        const depStatus = status?.services[dep];
+        if (depStatus && !['active', 'running'].includes(depStatus.status.toLowerCase())) {
+          await resolveService(dep);
         }
-        
-        return true;
       }
-      return false;
+      
+      // Then try to resolve the service itself
+      const response = await fetch(`/api/status/${service}/resolve`, {
+        method: 'POST',
+        headers: {
+          'Content-Type': 'application/json'
+        }
+      });
+      
+      const result = await response.json();
+      
+      if (!response.ok) {
+        throw new Error(result.error || `Failed to resolve ${service}`);
+      }
+      
+      // Update status immediately
+      setStatus(prev => {
+        if (!prev) return prev;
+        const newServices = { ...prev.services };
+        newServices[service].status = 'active';
+        return { ...prev, services: newServices };
+      });
+      
+      // Schedule a full status refresh after 2 seconds
+      setTimeout(() => fetchStatus(), 2000);
+      
     } catch (error) {
-      console.error('Error resolving service:', error);
-      return false;
+      console.error(`Error resolving ${service}:`, error);
+      setStatus(prev => {
+        if (!prev) return prev;
+        const newServices = { ...prev.services };
+        newServices[service].status = 'error';
+        return { ...prev, services: newServices };
+      });
+    } finally {
+      setResolvingService(null);
     }
   };
-  
+
   // Function to attempt to resolve all backend issues
   const resolveAllServices = async () => {
-    setResolvingAll(true);
-    console.log('Attempting to resolve all backend issues...');
-    
     try {
-      if (status) {
-        const updatedStatus = { ...status };
-        const servicesNeedingRestart: string[] = [];
-        const failedServices: string[] = [];
-        
-        // Identify services that need restarting
-        Object.keys(updatedStatus.services).forEach(key => {
-          const services = updatedStatus.services as Record<string, ServiceStatus>;
-          if (services[key].status.toLowerCase() !== 'active') {
-            servicesNeedingRestart.push(key);
-          }
-        });
-        
-        // Restart each service that needs it
-        for (const serviceKey of servicesNeedingRestart) {
-          try {
-            const restartResponse = await fetch(`/api/restart-service/${serviceKey}`, {
-              method: 'POST',
-              headers: { 'Content-Type': 'application/json' }
-            });
-            
-            if (restartResponse.ok) {
-              const restartResult = await restartResponse.json();
-              console.log(`Service ${serviceKey} restart result:`, restartResult);
-              
-              if (!restartResult.success) {
-                console.warn(`Service restart was not successful: ${restartResult.message}`);
-                failedServices.push(serviceKey);
-              } else {
-                // Update the UI for this service
-                const services = updatedStatus.services as Record<string, ServiceStatus>;
-                services[serviceKey].status = 'active';
-              }
-            } else {
-              console.warn(`Failed to restart service ${serviceKey}:`, await restartResponse.text());
-              failedServices.push(serviceKey);
-            }
-          } catch (error) {
-            const restartError = error as Error;
-            console.error(`Error restarting service ${serviceKey}:`, restartError);
-            failedServices.push(serviceKey);
-          }
-          
-          // Small delay between service restarts to prevent overwhelming the system
-          await new Promise(resolve => setTimeout(resolve, 500));
+      setResolvingAll(true);
+      
+      // Resolve services in dependency order
+      const services = Object.entries(status?.services || {});
+      
+      // Sort services by dependency depth (services with more dependencies first)
+      const sortedServices = services.sort((a, b) => {
+        const aDeps = SERVICE_DEPENDENCIES[a[0]]?.length || 0;
+        const bDeps = SERVICE_DEPENDENCIES[b[0]]?.length || 0;
+        return bDeps - aDeps;
+      });
+      
+      // Resolve each service that needs it
+      for (const [service] of sortedServices) {
+        const serviceStatus = status?.services[service];
+        if (serviceStatus && !['active', 'running'].includes(serviceStatus.status.toLowerCase())) {
+          await resolveService(service);
         }
-        
-        // As a fallback, update the status file directly
-        try {
-          await fetch('/update_backend_status.php', {
-            method: 'POST',
-            headers: { 'Content-Type': 'application/json' },
-            body: JSON.stringify({
-              action: 'resolve_all'
-            })
-          });
-        } catch (error) {
-          console.warn('Error updating backend status file:', error);
-        }
-        
-        // Update the UI
-        setStatus(updatedStatus);
-        
-        // Add successfully restarted services to our resolved services list
-        const successfulRestarts = servicesNeedingRestart.filter(key => !failedServices.includes(key));
-        if (successfulRestarts.length > 0) {
-          setResolvedServices(prev => [...prev, ...successfulRestarts]);
-        }
-        
-        // Set the appropriate message
-        if (failedServices.length === 0) {
-          setErrorMessage('All backend services restarted successfully');
-        } else if (failedServices.length < servicesNeedingRestart.length) {
-          setErrorMessage(`Some services could not be restarted: ${failedServices.join(', ')}`);
-        } else {
-          setErrorMessage('Failed to restart backend services');
-        }
-      } else {
-        setErrorMessage('Cannot resolve services: status information not available');
       }
+      
+      // Force a full status refresh
+      await fetchStatus();
+      
     } catch (error) {
-      console.error('Failed to resolve all services:', error);
-      setErrorMessage('Failed to resolve backend service issues');
+      console.error('Error resolving all services:', error);
+      setErrorMessage('Failed to resolve all services');
     } finally {
       setResolvingAll(false);
     }
@@ -470,180 +583,140 @@ const BackendStatusDashboard: React.FC = () => {
   // This provides a better user experience than showing an error message
 
   return (
-    <div className={`backend-status-dashboard ${expanded ? 'expanded' : 'collapsed'}`}>
-      <div className="backend-status-header" onClick={() => setExpanded(!expanded)}>
-        <h3>
-          <span className="status-indicator-dot" 
-                style={{ 
-                  backgroundColor: systemHealth.percentage > 80 ? '#4caf50' : 
-                                  systemHealth.percentage > 50 ? '#ff9800' : 
-                                  systemHealth.percentage > 0 ? '#f44336' : '#9e9e9e' 
-                }}></span>
-          Backend Status: {systemHealth.label}
-        </h3>
-        <div className="backend-status-controls">
-          {lastUpdated && (
-            <span className="last-updated">
-              Updated: {lastUpdated.toLocaleTimeString()}
-            </span>
-          )}
-          <button 
-            className="refresh-button" 
-            onClick={(e) => {
-              e.stopPropagation();
-              fetchStatus();
-            }}
-            title="Refresh Now"
-          >
-            ↻
-          </button>
-          <button 
-            className={`auto-refresh-button ${autoRefresh ? 'active' : ''}`}
-            onClick={(e) => {
-              e.stopPropagation();
-              setAutoRefresh(!autoRefresh);
-            }}
-            title={autoRefresh ? "Auto-refresh On" : "Auto-refresh Off"}
-          >
-            {autoRefresh ? "Auto" : "Manual"}
-          </button>
-          <button 
-            className="expand-button" 
-            onClick={(e) => {
-              e.stopPropagation();
-              setExpanded(!expanded);
-            }}
-          >
-            {expanded ? "▲" : "▼"}
-          </button>
-        </div>
+    <div className="status-container">
+      <div className="dependency-container">
+        {status && renderDependencyGraph(status.services)}
       </div>
-      
-      {showError}
-      
-      {expanded && (
-        <div className="backend-status-content">
-          {loading && (
-            <div className="status-loading-overlay">
-              <div className="loading-spinner"></div>
-              <p>Refreshing service status...</p>
-            </div>
-          )}
-          
-          <div className="system-health-indicator">
-            <div className="health-meter">
-              <div className="health-fill" style={{ width: `${systemHealth.percentage}%` }}></div>
-            </div>
-            <div className="health-label">
-              <span className="health-percentage">{systemHealth.percentage}%</span>
-              <span className="health-text">System Health</span>
-            </div>
+
+      {status && (
+        <div className="health-meter-container">
+          <div className="health-meter">
+            <motion.div 
+              className="health-bar"
+              style={{ width: `${calculateHealth(status.services).percentage}%` }}
+              animate={{ width: `${calculateHealth(status.services).percentage}%` }}
+              transition={{ duration: 0.3 }}
+            />
           </div>
-          
-          <div className="services-grid">
-            {status && Object.entries(status.services).map(([key, service]) => (
-              <div key={key} className="service-card">
-                <div className="service-header">
-                  <h4>{service.name}</h4>
-                  <div className="service-status-container">
-                    <span className={`service-status ${getStatusColor(service.status)}`}>
-                      {getStatusMessage(service.status)}
-                    </span>
-                  </div>
-                  <span className="service-uptime-indicator"></span>
-                </div>
-                {service.status.toLowerCase() !== 'active' && service.status.toLowerCase() !== 'running' && (
-                  <div className="service-action-container">
-                    <button 
-                      className="resolve-service-button"
-                      onClick={(e) => {
-                        e.stopPropagation();
-                        resolveService(key);
-                      }}
-                      disabled={resolvingAll}
-                    >
-                      {resolvingAll ? (
-                        <span className="spinner-small"></span>
-                      ) : (
-                        'Resolve'
-                      )}
-                    </button>
-                  </div>
-                )}
-                <div className="service-details">
-                  {service.pid && (
-                    <div className="service-detail">
-                      <span className="detail-label">PID:</span>
-                      <span className="detail-value">{service.pid}</span>
-                    </div>
-                  )}
-                  {key === 'backend' && service.managed_by_systemd && (
-                    <div className="service-detail">
-                      <span className="detail-label">Managed by:</span>
-                      <span className="detail-value systemd-managed">systemd</span>
-                    </div>
-                  )}
-                  {key === 'paper_trading' && service.trading_active !== undefined && (
-                    <div className="service-detail">
-                      <span className="detail-label">Trading:</span>
-                      <span className={`detail-value ${service.trading_active ? 'active-trading' : 'inactive-trading'}`}>
-                        {service.trading_active ? 'Active' : 'Paused'}
-                      </span>
-                    </div>
-                  )}
-                </div>
-              </div>
-            ))}
-          </div>
-          
-          <div className="logs-section">
-            <h4>Log Files</h4>
-            <div className="logs-grid">
-              {status && Object.entries(status.logs).map(([key, log]) => (
-                <div key={key} className="log-card">
-                  <div className="log-header">
-                    <h5>{key.charAt(0).toUpperCase() + key.slice(1)} Log</h5>
-                  </div>
-                  <div className="log-details">
-                    <div className="log-detail">
-                      <span className="detail-label">Last Updated:</span>
-                      <span className="detail-value">{getTimeSince(log.last_modified)}</span>
-                    </div>
-                    <div className="log-detail">
-                      <span className="detail-label">Path:</span>
-                      <span className="detail-value log-path">{log.path}</span>
-                    </div>
-                  </div>
-                </div>
-              ))}
-            </div>
-          </div>
-          
-          <div className="status-footer">
-            <div className="status-timestamp">
-              Status generated: {status ? formatDate(status.timestamp) : 'Unknown'}
-            </div>
-            <div className="footer-buttons">
-              <button 
-                className="resolve-all-button"
-                onClick={resolveAllServices}
-                disabled={resolvingAll || !status || calculateSystemHealth().percentage === 100}
-              >
-                {resolvingAll ? (
-                  <>
-                    <span className="spinner-small"></span> Resolving Issues...
-                  </>
-                ) : (
-                  'Resolve Backend Issues'
-                )}
-              </button>
-              <button className="view-logs-button" onClick={() => window.open('/logs', '_blank')}>
-                View Full Logs
-              </button>
-            </div>
+          <div className="health-label">
+            {calculateHealth(status.services).label} ({calculateHealth(status.services).percentage}%)
           </div>
         </div>
       )}
+
+      <div className="service-grid">
+        {status && Object.entries(status.services).map(([key, service]) => (
+          <motion.div
+            key={key}
+            className="service-card"
+            initial={{ opacity: 0, y: 20 }}
+            animate={{ opacity: 1, y: 0 }}
+            transition={{ duration: 0.3 }}
+          >
+            <div className="service-header">
+              <div className={`status-indicator ${getStatusColor(service.status)}`} />
+              <span className="service-name">{service.name}</span>
+            </div>
+
+            <div className="service-details">
+              {service.pid && (
+                <div className="service-detail">
+                  <span className="detail-label">PID:</span>
+                  <span className="detail-value">{service.pid}</span>
+                </div>
+              )}
+              {key === 'backend' && service.managed_by_systemd && (
+                <div className="service-detail">
+                  <span className="detail-label">Managed by:</span>
+                  <span className="detail-value systemd-managed">systemd</span>
+                </div>
+              )}
+              {key === 'paper_trading' && service.trading_active !== undefined && (
+                <div className="service-detail">
+                  <span className="detail-label">Trading:</span>
+                  <span className={`detail-value ${service.trading_active ? 'active-trading' : 'inactive-trading'}`}>
+                    {service.trading_active ? 'Active' : 'Paused'}
+                  </span>
+                </div>
+              )}
+              {service.dependencies && service.dependencies.length > 0 && (
+                <div className="service-detail">
+                  <span className="detail-label">Dependencies:</span>
+                  <span className="detail-value">
+                    {service.dependencies.join(', ')}
+                  </span>
+                </div>
+              )}
+            </div>
+
+            {service.status.toLowerCase() !== 'active' && service.status.toLowerCase() !== 'running' && (
+              <div className="service-action-container">
+                <button 
+                  className="resolve-service-button"
+                  onClick={(e) => {
+                    e.stopPropagation();
+                    resolveService(key);
+                  }}
+                  disabled={resolvingService === key || resolvingAll}
+                >
+                  {resolvingService === key ? (
+                    <span className="spinner-small"></span>
+                  ) : (
+                    'Resolve'
+                  )}
+                </button>
+              </div>
+            )}
+          </motion.div>
+        ))}
+      </div>
+
+      <div className="logs-section">
+        <h4>Log Files</h4>
+        <div className="logs-grid">
+          {status && Object.entries(status.logs).map(([key, log]) => (
+            <div key={key} className="log-card">
+              <div className="log-header">
+                <h5>{key.charAt(0).toUpperCase() + key.slice(1)} Log</h5>
+              </div>
+              <div className="log-details">
+                <div className="log-detail">
+                  <span className="detail-label">Last Updated:</span>
+                  <span className="detail-value">{getTimeSince(log.last_modified)}</span>
+                </div>
+                <div className="log-detail">
+                  <span className="detail-label">Path:</span>
+                  <span className="detail-value log-path">{log.path}</span>
+                </div>
+              </div>
+            </div>
+          ))}
+        </div>
+      </div>
+
+      <div className="status-footer">
+        <div className="status-timestamp">
+          Status generated: {status ? formatDate(status.timestamp) : 'Unknown'}
+        </div>
+        <div className="footer-buttons">
+          <button 
+            className="resolve-all-button"
+            onClick={resolveAllServices}
+            disabled={resolvingAll || !status || calculateHealth(status.services).percentage === 100}
+          >
+            {resolvingAll ? (
+              <>
+                <span className="spinner-small"></span> Resolving Issues...
+              </>
+            ) : (
+              'Resolve Backend Issues'
+            )}
+          </button>
+          <button className="view-logs-button" onClick={() => window.open('/logs', '_blank')}>
+            View Full Logs
+          </button>
+        </div>
+      </div>
     </div>
   );
 };

@@ -8,6 +8,7 @@ import MLInsights from './components/MLInsights';
 import BackendStatusDashboard from './components/BackendStatusDashboard';
 import CryptoCharts from './components/CryptoCharts';
 import AssetManagement from './components/AssetManagement';
+import Logs from './components/Logs';
 
 // Interface for coin data from CoinGecko API
 interface CoinGeckoData {
@@ -576,6 +577,15 @@ function App() {
             <Settings className="h-5 w-5" />
             <span>Settings</span>
           </button>
+          <button
+            onClick={() => setActiveTab('logs')}
+            className={`flex items-center space-x-3 px-4 py-3 text-gray-700 dark:text-gray-300 hover:bg-gray-100 dark:hover:bg-gray-700 rounded-lg transition-colors ${
+              activeTab === 'logs' ? 'bg-blue-500 text-white' : ''
+            }`}
+          >
+            <Settings className="h-5 w-5" />
+            <span>Logs</span>
+          </button>
         </nav>
       </aside>
 
@@ -589,6 +599,7 @@ function App() {
             {activeTab === 'paper' && 'Paper Trading'}
             {activeTab === 'ml-insights' && 'Internals'}
             {activeTab === 'settings' && 'Settings'}
+            {activeTab === 'logs' && 'Logs'}
           </h1>
           <div className="flex items-center space-x-4">
             <button
@@ -931,6 +942,9 @@ function App() {
           <div className="space-y-6">
             {/* Settings content */}
           </div>
+        )}
+        {activeTab === 'logs' && (
+          <Logs />
         )}
       </main>
 
