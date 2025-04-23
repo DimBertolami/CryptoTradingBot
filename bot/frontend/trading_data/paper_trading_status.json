@@ -1,5 +1,5 @@
 {
-    "is_running": true,
+    "is_running": false,
     "mode": "paper",
     "balance": 10000,
     "holdings": {
@@ -13,13 +13,7 @@
     "portfolio_value": 0.0,
     "performance": {},
     "trade_history": [],
-    "last_prices": {
-        "BTCUSDT": 88444.67,
-        "ETHUSDT": 1587.87,
-        "BNBUSDT": 602.12,
-        "ADAUSDT": 0.6297,
-        "DOGEUSDT": 0.16149
-    },
-    "last_updated": "2025-04-22T04:00:06.117997",
+    "last_prices": {},
+    "last_updated": "2025-04-23T06:42:06.248376",
     "api_keys_configured": true
 }

@@ -7,7 +7,7 @@ from datetime import datetime
 class MarketIndicators:
     """Market condition indicators for strategy selection"""
     
-    def __init__(self, data: pd.DataFrame):
+    def __init__(self, data: pd.DataFrame): #a pandas dataframe is a table of data with a timestamp as index.
         self.data = data
         self.indicators = self._calculate_indicators()
         

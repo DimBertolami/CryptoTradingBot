@@ -1,7 +1,8 @@
 #!/usr/bin/env python3
 """
-Paper Trading CLI for Binance
-This script provides a command-line interface to start, stop, and manage paper trading.
+Paper Trading CLI for Binance  - Author: Dim Bertolami
+This script provides a command-line interface to start, 
+stop, and manage paper trading.
 """
 
 import os
@@ -74,7 +75,7 @@ def main():
     
     # Start command
     start_parser = subparsers.add_parser('start', help='Start paper trading')
-    start_parser.add_argument('--interval', type=int, default=300, help='Trading cycle interval in seconds')
+    start_parser.add_argument('--interval', type=int, default=10, help='Trading cycle interval in seconds')
     
     # Stop command
     subparsers.add_parser('stop', help='Stop paper trading')
@@ -104,7 +105,7 @@ def main():
                                     help='Enable or disable auto-execution of suggested trades')
     auto_execute_parser.add_argument('--confidence', type=float, default=0.75, 
                                     help='Minimum confidence threshold for auto-execution (0.0-1.0)')
-    auto_execute_parser.add_argument('--interval', type=int, default=60, 
+    auto_execute_parser.add_argument('--interval', type=int, default=10, 
                                     help='Refresh interval for checking suggested trades in seconds')
     
     # Execute trade command
@@ -152,7 +153,7 @@ def main():
         else:
             # Check if API keys are set for live mode
             if args.mode == 'live' and (not strategy.config.get('api_key') or not strategy.config.get('api_secret')):
-                print("API keys not set. Please set API keys first using the 'api' command.")
+                print("API keys not set. Please set API keys first using the 'api' switch.")
             else:
                 print(f"Switching to {args.mode} mode...")
                 strategy.switch_mode(args.mode)
