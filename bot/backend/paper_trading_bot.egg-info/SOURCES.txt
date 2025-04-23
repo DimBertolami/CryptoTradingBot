@@ -1,0 +1,8 @@
+setup.py
+paper_trading_bot.egg-info/PKG-INFO
+paper_trading_bot.egg-info/SOURCES.txt
+paper_trading_bot.egg-info/dependency_links.txt
+paper_trading_bot.egg-info/requires.txt
+paper_trading_bot.egg-info/top_level.txt
+strategies/__init__.py
+strategies/paper_trading.py

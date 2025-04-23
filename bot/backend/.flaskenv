@@ -1,0 +1,1 @@
+FLASK_APP=paper_trading_api:create_app

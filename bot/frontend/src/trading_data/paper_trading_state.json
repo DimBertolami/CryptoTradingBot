@@ -1,0 +1,17 @@
+{
+  "is_running": false,
+  "mode": "live",
+  "balance": 10000.0,
+  "holdings": {},
+  "base_currency": "USDT",
+  "portfolio_value": 0.0,
+  "performance": {},
+  "trade_history": [],
+  "last_prices": {},
+  "last_updated": "2025-04-22T22:38:14.361549",
+  "api_keys_configured": false,
+  "api_keys_valid": false,
+  "auto_execute_suggested_trades": false,
+  "min_confidence_threshold": 0.75,
+  "suggested_trade_refresh_interval": 60
+}
