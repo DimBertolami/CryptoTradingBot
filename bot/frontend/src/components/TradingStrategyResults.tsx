@@ -478,7 +478,13 @@ const TradingStrategyResults: React.FC<TradingStrategyResultsProps> = ({
   };
 
   // Chart data function
-  const getChartData = useCallback(() => {
+  interface ChartPoint {
+    time: string;
+    price: number;
+    signal: 'BUY' | 'SELL';
+}
+
+const getChartData = useCallback((): ChartPoint[] => {
     if (!performanceData?.tradeHistory) return [];
     
     return performanceData.tradeHistory.map(trade => ({
@@ -636,7 +642,7 @@ const TradingStrategyResults: React.FC<TradingStrategyResultsProps> = ({
             <div className="h-24 mt-2">
               <ResponsiveContainer width="100%" height="100%">
                 <AreaChart
-                  data={getChartData()[index]?.data || []}
+                  data={Array.isArray(getChartData()) ? getChartData() : []}
                   margin={{ top: 5, right: 5, left: 5, bottom: 5 }}
                 >
                   <defs>

@@ -1,4 +1,5 @@
 import React, { useState, useEffect, useCallback, useRef } from 'react';
+
 import './PaperTradingDashboard.css';
 
 interface TradeHistoryItem {
@@ -84,7 +85,7 @@ const DEFAULT_STATUS: PaperTradingStatus = {
 
 const PaperTradingDashboard: React.FC<PaperTradingDashboardProps> = ({ 
   selectedPeriod = '1m',
-  autoExecuteEnabled: propAutoExecuteEnabled,
+  autoExecuteEnabled = false,
   onAutoExecuteChange
 }) => {
   const [status, setStatus] = useState<PaperTradingStatus>(DEFAULT_STATUS);
@@ -102,7 +103,6 @@ const PaperTradingDashboard: React.FC<PaperTradingDashboardProps> = ({
   const [highlightedTradeId, setHighlightedTradeId] = useState<number | null>(null);
   
   // Auto-execution settings
-  const [autoExecuteEnabled, setAutoExecuteEnabled] = useState<boolean>(propAutoExecuteEnabled ?? false);
   const [confidenceThreshold, setConfidenceThreshold] = useState<number>(0.75);
   // Using the main dashboard's interval instead of a separate setting
 
@@ -498,7 +498,7 @@ const PaperTradingDashboard: React.FC<PaperTradingDashboardProps> = ({
           if (errorJson.message) {
             errorMessage = errorJson.message;
           }
-        } catch {}
+        } catch (e) {}
         throw new Error(errorMessage);
       }
       
@@ -634,10 +634,10 @@ const PaperTradingDashboard: React.FC<PaperTradingDashboardProps> = ({
   
   // Sync local state with props when they change
   useEffect(() => {
-    if (propAutoExecuteEnabled !== undefined && propAutoExecuteEnabled !== autoExecuteEnabled) {
-      setAutoExecuteEnabled(propAutoExecuteEnabled);
+    if (onAutoExecuteChange && autoExecuteEnabled !== undefined && autoExecuteEnabled !== autoExecuteEnabled) {
+      onAutoExecuteChange(autoExecuteEnabled);
     }
-  }, [propAutoExecuteEnabled, autoExecuteEnabled]);
+  }, [autoExecuteEnabled, onAutoExecuteChange]);
   
   // Update auto-execution settings when status changes, but only on the first load
   useEffect(() => {
@@ -646,17 +646,17 @@ const PaperTradingDashboard: React.FC<PaperTradingDashboardProps> = ({
       
       if (isFirstRender.current) {
         // Initialize settings from status only on first render
-        const initialAutoExecute = propAutoExecuteEnabled !== undefined 
-          ? propAutoExecuteEnabled 
+        const initialAutoExecute = autoExecuteEnabled !== undefined 
+          ? autoExecuteEnabled 
           : (status.auto_execute_suggested_trades !== undefined ? !!status.auto_execute_suggested_trades : false);
         
-        setAutoExecuteEnabled(initialAutoExecute);
+        if (onAutoExecuteChange) onAutoExecuteChange(initialAutoExecute);
         setConfidenceThreshold(status.min_confidence_threshold || 0.75);
         isFirstRender.current = false;
       }
       // No longer need to set refresh interval as we're using the dashboard's interval
     }
-  }, [status, propAutoExecuteEnabled]);
+  }, [status, autoExecuteEnabled, onAutoExecuteChange]);
   
   // Set up polling for updates
   useEffect(() => {
@@ -1039,10 +1039,9 @@ const PaperTradingDashboard: React.FC<PaperTradingDashboardProps> = ({
                     checked={autoExecuteEnabled} 
                     onChange={(e) => {
                       const newValue = e.target.checked;
-                      setAutoExecuteEnabled(newValue);
-                      console.log('Auto-execute toggled to:', newValue);
                       if (onAutoExecuteChange) {
                         onAutoExecuteChange(newValue);
+                        console.log('Auto-execute toggled to:', newValue);
                       }
                     }}
                   />
@@ -1085,7 +1084,7 @@ const PaperTradingDashboard: React.FC<PaperTradingDashboardProps> = ({
                   onClick={() => {
                     // Ensure auto-execute is enabled before saving
                     if (!autoExecuteEnabled) {
-                      setAutoExecuteEnabled(true);
+                      if (onAutoExecuteChange) onAutoExecuteChange(true);
                       setTimeout(saveAutoExecuteSettings, 100); // Give state time to update
                     } else {
                       saveAutoExecuteSettings();

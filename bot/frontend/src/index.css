@@ -7,6 +7,16 @@
 @tailwind components;
 @tailwind utilities;
 /* postcss-tailwind-directives:end */
+
+/* Hide scrollbar for indicator dropdown (TechnicalAnalysisChart) */
+.indicator-dropdown {
+  scrollbar-width: none; /* Firefox */
+  -ms-overflow-style: none; /* Internet Explorer 10+ */
+}
+.indicator-dropdown::-webkit-scrollbar {
+  display: none; /* Safari and Chrome */
+}
+
 /* CSS-IGNORE */
 
 :root {

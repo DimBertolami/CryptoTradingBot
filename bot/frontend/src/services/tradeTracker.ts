@@ -31,7 +31,8 @@ export class TradeTracker {
       if (savedTrades) {
         this.offlineStorage = JSON.parse(savedTrades);
       }
-    } catch (_) {
+    } catch {
+
       console.warn('Could not load offline trades from localStorage');
     }
   }
@@ -91,7 +92,8 @@ export class TradeTracker {
         success: true,
         data: newTrade
       };
-    } catch (_) {
+    } catch {
+
       return {
         success: false,
         error: 'Failed to save trade offline'
@@ -138,7 +140,8 @@ export class TradeTracker {
         success: false,
         error: 'Trade not found in offline storage'
       };
-    } catch (_) {
+    } catch {
+
       return {
         success: false,
         error: 'Failed to update trade status offline'

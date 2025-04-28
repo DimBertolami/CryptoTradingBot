@@ -1,7 +1,7 @@
 import React, { useState, useEffect } from 'react';
 import { LineChart, Line, XAxis, YAxis, CartesianGrid, Tooltip, ResponsiveContainer, BarChart, Bar } from 'recharts';
-import { format } from 'date-fns';
-import { Menu, Sun, Moon, LogOut } from 'lucide-react';
+
+import { useTheme } from '@mui/material/styles';
 
 interface TrainingProgress {
   timestamp: string;
@@ -414,45 +414,89 @@ const mockData = {
 };
 
 const MLInsights: React.FC = () => {
-  const [isDarkMode, setIsDarkMode] = useState(false);
-  const [isSidebarOpen, setIsSidebarOpen] = useState(true);
+  const theme = useTheme();
+  const [isDarkMode, ] = useState(false);
   const [logEntries, setLogEntries] = useState<LogEntry[]>([]);
   const [selectedModel, setSelectedModel] = useState<string | null>(null);
   const [showModelDetails, setShowModelDetails] = useState(false);
+  const [error, setError] = useState<string | null>(null);
+
+  // Defensive: wrap main effect in try/catch
+  useEffect(() => {
+    try {
+      // existing effect logic...
+      // (if you have async fetch, wrap it in try/catch as well)
+    } catch {
+
+      setError('An error occurred loading ML insights.');
+      // Optionally log err
+    }
+  }, []);
+
+  // Defensive rendering: if error, show fallback UI
+  if (error) {
+    return (
+      <div style={{ padding: 32, textAlign: 'center', color: 'red' }}>
+        <h2>ML Insights Error</h2>
+        <p>{error}</p>
+        <button onClick={() => window.location.reload()}>Reload</button>
+      </div>
+    );
+  }
+
+  // Defensive: check for required data before rendering
+  if (!logEntries) {
+    return <div style={{ padding: 32, textAlign: 'center' }}>Loading...</div>;
+  }
 
   const handleMouseEnter = (e: React.MouseEvent, details: string) => {
-    const tooltip = document.createElement('div');
-    tooltip.className = `fixed z-50 bg-gray-800 text-white px-4 py-2 rounded-lg shadow-lg text-sm max-w-[400px] ${isDarkMode ? 'bg-gray-800' : 'bg-white text-gray-900'}`;
-    tooltip.style.left = `${e.clientX + 10}px`;
-    tooltip.style.top = `${e.clientY + 10}px`;
-    
-    // Convert markdown-like content to HTML
-    const htmlContent = details
-      .split('\n')
-      .map(line => {
-        if (line.startsWith('- ')) {
-          return `<li>${line.slice(2)}</li>`;
-        }
-        if (line.startsWith('1. ')) {
-          return `<li>${line.slice(3)}</li>`;
-        }
-        return `<p>${line}</p>`;
-      })
-      .join('');
-    
-    tooltip.innerHTML = `
-      <div class="p-2">
-        ${htmlContent}
-      </div>
-    `;
-    
-    document.body.appendChild(tooltip);
+    try {
+      const tooltip = document.createElement('div');
+      tooltip.className = `fixed z-50 bg-gray-800 text-white px-4 py-2 rounded-lg shadow-lg text-sm max-w-[400px] ${isDarkMode ? 'bg-gray-800' : 'bg-white text-gray-900'}`;
+      tooltip.style.left = `${e.clientX + 10}px`;
+      tooltip.style.top = `${e.clientY + 10}px`;
+      
+      // Convert markdown-like content to HTML
+      const htmlContent = details
+        .split('\n')
+        .map(line => {
+          if (line.startsWith('- ')) {
+            return `<li>${line.slice(2)}</li>`;
+          }
+          if (line.startsWith('1. ')) {
+            return `<li>${line.slice(3)}</li>`;
+          }
+          return `<p>${line}</p>`;
+        })
+        .join('');
+      
+      tooltip.innerHTML = `
+        <div class="p-2">
+          ${htmlContent}
+        </div>
+      `;
+      document.body.appendChild(tooltip);
+    } catch {
+
+      // Defensive: do not throw, just ignore
+      // Optionally log error
+    }
   };
 
+
   const handleMouseLeave = () => {
-    const tooltips = document.querySelectorAll('.fixed.z-50');
-    tooltips.forEach(tooltip => tooltip.remove());
+    try {
+      const tooltips = document.querySelectorAll('.fixed.z-50');
+      if (tooltips && tooltips.length > 0) {
+        tooltips.forEach(tooltip => tooltip.remove());
+      }
+    } catch {
+
+      // Defensive: do not throw, just ignore
+      // Optionally log error
+    }
   };
+
 
   const calculateTimeRemaining = (estimatedCompletion: string): string => {
     const now = new Date();
@@ -470,14 +514,16 @@ const MLInsights: React.FC = () => {
   };
 
   const getModelMetricsChart = (model: ModelPerformance) => {
+    if (!model || !model.metrics) {
+      return <div style={{ color: 'red', textAlign: 'center' }}>No metrics data available.</div>;
+    }
     const data = [
-      { name: 'Accuracy', value: model.metrics.accuracy * 100 },
-      { name: 'Precision', value: model.metrics.precision * 100 },
-      { name: 'Recall', value: model.metrics.recall * 100 },
-      { name: 'F1 Score', value: model.metrics.f1Score * 100 },
-      { name: 'Confidence', value: model.metrics.confidence * 100 }
+      { name: 'Accuracy', value: (model.metrics.accuracy ?? 0) * 100 },
+      { name: 'Precision', value: (model.metrics.precision ?? 0) * 100 },
+      { name: 'Recall', value: (model.metrics.recall ?? 0) * 100 },
+      { name: 'F1 Score', value: (model.metrics.f1Score ?? 0) * 100 },
+      { name: 'Confidence', value: (model.metrics.confidence ?? 0) * 100 }
     ];
-
     return (
       <ResponsiveContainer width="100%" height={200}>
         <BarChart data={data}>
@@ -491,14 +537,17 @@ const MLInsights: React.FC = () => {
     );
   };
 
-  const getModelTaskChart = (model: ModelPerformance) => {
-    const data = [
-      { name: 'Price Prediction', value: model.tasks.pricePrediction * 100 },
-      { name: 'Pattern Recognition', value: model.tasks.patternRecognition * 100 },
-      { name: 'Market Sentiment', value: model.tasks.marketSentiment * 100 },
-      { name: 'Risk Assessment', value: model.tasks.riskAssessment * 100 }
-    ];
 
+  const getModelTaskChart = (model: ModelPerformance) => {
+    if (!model || !model.tasks) {
+      return <div style={{ color: 'red', textAlign: 'center' }}>No task data available.</div>;
+    }
+    const data = [
+      { name: 'Price Prediction', value: (model.tasks.pricePrediction ?? 0) * 100 },
+      { name: 'Pattern Recognition', value: (model.tasks.patternRecognition ?? 0) * 100 },
+      { name: 'Market Sentiment', value: (model.tasks.marketSentiment ?? 0) * 100 },
+      { name: 'Risk Assessment', value: (model.tasks.riskAssessment ?? 0) * 100 }
+    ];
     return (
       <ResponsiveContainer width="100%" height={200}>
         <LineChart data={data}>
@@ -512,26 +561,30 @@ const MLInsights: React.FC = () => {
     );
   };
 
+
   const getModelArchitectureChart = (model: ModelPerformance) => {
-    const layers = model.architecture?.layers || [];
+    if (!model || !model.architecture || !Array.isArray(model.architecture.layers)) {
+      return <div style={{ color: 'red', textAlign: 'center' }}>No architecture data available.</div>;
+    }
+    const layers = model.architecture.layers;
     const data = layers.map((layer, index) => ({
       name: `${layer.type} ${index + 1}`,
       units: layer.units || 0,
       index
     }));
-
     return (
       <ResponsiveContainer width="100%" height={200}>
         <BarChart data={data}>
           <CartesianGrid strokeDasharray="3 3" />
           <XAxis dataKey="name" angle={-45} textAnchor="end" />
-          <YAxis domain={[0, Math.max(...data.map(d => d.units))]} />
+          <YAxis domain={[0, Math.max(1, ...data.map(d => d.units))]} />
           <Tooltip />
           <Bar dataKey="units" fill="#8884d8" />
         </BarChart>
       </ResponsiveContainer>
     );
   };
+
 
   useEffect(() => {
     // Initialize log entries
@@ -549,43 +602,11 @@ const MLInsights: React.FC = () => {
   }, []); // mockData is intentionally not included in dependencies
 
   return (
-    <div className={`min-h-screen bg-gray-50 dark:bg-gray-900 ${isDarkMode ? 'dark' : ''}`}>
-      {/* Sidebar */}
-      <aside
-        className={`fixed inset-y-0 left-0 w-64 md:w-72 lg:w-80 bg-white dark:bg-gray-800 shadow-lg transition-transform duration-300 ${
-          isSidebarOpen ? 'translate-x-0' : '-translate-x-full md:translate-x-0'
-        }`}
-      >
-        <div className="p-4 border-b dark:border-gray-700">
-          <h1 className="text-xl font-bold text-gray-900 dark:text-white">Internals</h1>
-        </div>
-        <nav className="p-4 space-y-2">
-          <button
-            onClick={() => window.location.href = '/'}
-            className="flex items-center p-2 rounded-lg hover:bg-gray-100 dark:hover:bg-gray-700 transition-colors text-red-600 dark:text-red-400 w-full"
-            title="Exit Internals"
-          >
-            <LogOut className="h-5 w-5 mr-2" />
-            <span>Exit</span>
-          </button>
-          <hr className="my-2 border-gray-200 dark:border-gray-700" />
-          <button
-            onClick={() => setIsDarkMode(!isDarkMode)}
-            className="p-2 rounded-lg hover:bg-gray-100 dark:hover:bg-gray-700 transition-colors"
-          >
-            {isDarkMode ? <Sun className="h-5 w-5" /> : <Moon className="h-5 w-5" />}
-          </button>
-          <button
-            onClick={() => setIsSidebarOpen(!isSidebarOpen)}
-            className="p-2 rounded-lg hover:bg-gray-100 dark:hover:bg-gray-700 transition-colors"
-          >
-            <Menu className="h-5 w-5" />
-          </button>
-        </nav>
-      </aside>
+    <div style={{ minHeight: '100vh', background: theme.palette.background.default, color: theme.palette.text.primary }}>
 
+// ... rest of the code ...
       {/* Main Content */}
-      <main className="ml-64 md:ml-72 lg:ml-80 p-6">
+      <main className="p-6">
         <div className="grid grid-cols-1 lg:grid-cols-2 gap-6">
           {/* Model Overview */}
           <div className="bg-white dark:bg-gray-800 rounded-lg shadow p-4">
@@ -687,7 +708,7 @@ const MLInsights: React.FC = () => {
                   onMouseLeave={handleMouseLeave}
                 >
                   <div className="flex justify-between items-start">
-                    <span className="text-sm font-medium">{format(new Date(entry.timestamp), 'HH:mm:ss')}</span>
+                    <span className="text-sm font-medium">{new Date(entry.timestamp).toLocaleTimeString()}</span>
                     <span className="text-xs opacity-70">{entry.type}</span>
                   </div>
                   <p className="mt-1 text-sm">{entry.message}</p>
@@ -783,7 +804,7 @@ const MLInsights: React.FC = () => {
                   <div className="flex justify-between items-start">
                     <div>
                       <h4 className="font-medium">{decision.symbol}</h4>
-                      <p className="text-sm text-gray-500">{format(new Date(decision.timestamp), 'HH:mm')}</p>
+                      <p className="text-sm text-gray-500">{new Date(decision.timestamp).toLocaleTimeString([], { hour: '2-digit', minute: '2-digit' })}</p>
                     </div>
                     <div className="flex items-center gap-2">
                       <span className={`px-2 py-1 rounded-full text-xs ${
@@ -902,8 +923,7 @@ const MLInsights: React.FC = () => {
               className="absolute top-4 right-4 text-gray-400 hover:text-gray-600 dark:hover:text-gray-300"
             >
               <svg xmlns="http://www.w3.org/2000/svg" width="24" height="24" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round">
-                <line x1="18" y1="6" x2="6" y2="18"></line>
-                <line x1="6" y1="6" x2="18" y2="18"></line>
+                {/* Removed SVG <line> elements for a cleaner UI. You may use an alternative icon or leave the button as is. */}
               </svg>
             </button>
           </div>

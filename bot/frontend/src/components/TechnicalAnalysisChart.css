@@ -1,0 +1,11 @@
+.indicator-dropdown {
+  scrollbar-width: thin;
+  scrollbar-color: transparent transparent;
+}
+.indicator-dropdown::-webkit-scrollbar {
+  width: 0px;
+  background: transparent;
+}
+.indicator-dropdown::-webkit-scrollbar-thumb {
+  background: transparent;
+}
