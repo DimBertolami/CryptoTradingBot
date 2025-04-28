@@ -12,6 +12,12 @@ dist
 dist-ssr
 *.local
 
+# Sensitive trading data and API keys
+trading_data/
+trading_data/*.json
+trading_data/*.bak
+trading_data/*backup*
+
 # Editor directories and files
 .vscode/*
 !.vscode/extensions.json
@@ -22,3 +28,22 @@ dist-ssr
 *.njsproj
 *.sln
 *.sw?
+*.zip
+venv/
+venv2/
+bot/venv/
+bot/venv2/
+*.tar
+*.tar.gz
+*.exe
+*.bin
+*.mp4
+*.mov
+*.avi
+*.mkv
+*.mp3
+*.wav
+*.png
+*.jpg
+*.jpeg
+*.pdf
